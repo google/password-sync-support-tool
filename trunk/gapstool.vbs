@@ -396,11 +396,16 @@ Function ByteArrToHexString(bytes)
 End Function
  
 'Plans For the future:
+'Gracefully handle case when not running the script as a domain user.
 'Make an HTML report instead of just collecting text files
 'Offer to restart DCs whose DLL is registered but not loaded, if not the current server
 'Offer to start the service is it's stopped
-'Fix UAC elevation
+'Fix UAC elevation in VBS or remove references to it as it's handled by AutoIt wrapper
 'Ask which username is affected and get their LDIF dump, and correlate their pwdLastSet to appearance in the logs - this can tell us if the issue is with the service, the DLL, etc.
+'Get the user's LDIF dump using the credentials detailed in the XML
+'Try to find password change events in the Event Log for that user to see where password change occurred
+'If anonymous access is enabled in the XML, check if it's allowed in AD
+'If any of the log files are missing, collect the ACL of that folder (in case there are no permissions for the service user to create the logs). Offer to fix.
 'Ask what user was used to install on the other DCs so that we can get the correct path for UI logs, instead of guessing
 'Compare XMLs across all servers
 'Decode proxy/WinHTTP settings if possible
@@ -411,4 +416,3 @@ End Function
 'Compare time across DCs
 'Compare time to google.com
 
-'Use AutoIt instead of VBScript?
