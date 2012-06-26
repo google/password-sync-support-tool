@@ -396,7 +396,8 @@ Function ByteArrToHexString(bytes)
 End Function
  
 'Plans For the future:
-'Gracefully handle case when not running the script as a domain user.
+'Report which machine the tool is running on
+'Gracefully handle case when not running the script as a domain user
 'Make an HTML report instead of just collecting text files
 'Offer to restart DCs whose DLL is registered but not loaded, if not the current server
 'Offer to start the service is it's stopped
