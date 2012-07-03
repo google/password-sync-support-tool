@@ -85,6 +85,7 @@ While NumCompleted <= UBound(arrWritableDCs)
 		If Not IsNull(arrExec(i)) Then
 			arrBuffers(i) = arrBuffers(i) & arrOutFiles(i).Read(1)
 			Err.Clear 'Ignore "Input past end of file" errors
+      'TODO: Improve logging here - some text files aren't being read on domains with many DCs
 			'As long as we have full lines...
 			While InStr(arrBuffers(i),vbNewLine)>0 
 				If InStr(arrBuffers(i),vbNewLine)>1 Then LogStr "A:Job " & arrWritableDCs(i) & ": " & Left(arrBuffers(i),InStr(arrBuffers(i),vbNewLine)-1)
