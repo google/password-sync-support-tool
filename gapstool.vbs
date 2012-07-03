@@ -11,7 +11,7 @@ Const WshFinished = 1
 Const WshRunning = 0
 
 'Force running in a console window
-If Not UCase(Right(WScript.FullName,12))="\CSCRIPT.EXE" Then
+If Not UCase(Right(WScript.FullName,12))="\CSCRIPT.EXE" Then
 	objShell.Run "cscript //nologo """ & WScript.ScriptFullName & """"
 	WScript.Quit
 End If
@@ -399,6 +399,7 @@ End Function
 'Report which machine the tool is running on
 'Gracefully handle case when not running the script as a domain user
 'Make an HTML report instead of just collecting text files
+'Support paths on upgraded systems such as "C:\WINNT\Profiles\All Users\Application Data\\Google\Google Apps Password Sync\config.xml" etc.
 'Offer to restart DCs whose DLL is registered but not loaded, if not the current server
 'Offer to start the service is it's stopped
 'Fix UAC elevation in VBS or remove references to it as it's handled by AutoIt wrapper
