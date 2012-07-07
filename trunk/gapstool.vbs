@@ -163,6 +163,7 @@ Sub RunDiagnostics(CompName)
 	objShell.Run "cmd /c reg query \\" & CompName & "\HKLM\SYSTEM\CurrentControlSet\Control\Lsa /v ""Notification Packages"" 1>dll-reg.txt 2>dll-reg.err", 0
 	If Err<>0 Then WScript.StdOut.WriteLine " E: " & LogErr
 	WScript.StdOut.WriteLine "Getting tasklist.exe output to see if DLL is loaded - dll-loaded.txt"
+  'TODO: Verify support for Windows Server 2012 
 	objShell.Run "cmd /c tasklist /S " & CompName & " /m password_sync_dll.dll 1>dll-loaded.txt 2>dll-loaded.err", 0
 	If Err<>0 Then WScript.StdOut.WriteLine " E: " & LogErr
 	WScript.StdOut.WriteLine "Getting service status - service.txt"
