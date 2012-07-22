@@ -402,6 +402,7 @@ End Function
 'Gracefully handle case when not running the script as a domain user
 'Make an HTML report instead of just collecting text files
 'Support paths on upgraded systems such as "C:\WINNT\Profiles\All Users\Application Data\\Google\Google Apps Password Sync\config.xml" etc.
+'Make sure all info gathering tasks are done before wrapping up each DC.
 'Offer to restart DCs whose DLL is registered but not loaded, if not the current server
 'Offer to start the service is it's stopped
 'Fix UAC elevation in VBS or remove references to it as it's handled by AutoIt wrapper
