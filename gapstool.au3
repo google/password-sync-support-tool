@@ -6,7 +6,7 @@
 #AutoIt3Wrapper_Res_requestedExecutionLevel=requireAdministrator
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 
-;Copyright 2011 Google Inc. All Rights Reserved.
+;Copyright 2012 Google Inc. All Rights Reserved.
 ;
 ;Licensed under the Apache License, Version 2.0 (the "License");
 ;you may not use this file except in compliance with the License.
