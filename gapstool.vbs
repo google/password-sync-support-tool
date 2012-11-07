@@ -430,6 +430,7 @@ End Function
 'Decode proxy/WinHTTP settings if possible
 'Verify that the BaseDN is correct for this domain
 'Get relevant events from Windows Event Logs
+'Get minidump files: %temp%\WER* folder on Win2008, C:\WINDOWS\pchealth\ERRORREP\UserDumps on Win2003
 'v3:
 'Verify that the user used for querying in the XML has correct permissions (warn on every user/OU for which they can't see the "mail" attribute)
 'Compare time across DCs
