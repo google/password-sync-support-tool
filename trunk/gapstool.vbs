@@ -427,7 +427,7 @@ End Function
 'If any of the log files are missing, collect the ACL of that folder (in case there are no permissions for the service user to create the logs). Offer to fix.
 'Ask what user was used to install on the other DCs so that we can get the correct path for UI logs, instead of guessing
 'Compare XMLs across all servers
-'Decode proxy/WinHTTP settings if possible
+'Decode proxy/WinHTTP settings if possible, for example http://p0w3rsh3ll.wordpress.com/2012/10/07/getsetclear-proxy/
 'Verify that the BaseDN is correct for this domain
 'Get relevant events from Windows Event Logs
 'Get minidump files: %temp%\WER* folder on Win2008, C:\WINDOWS\pchealth\ERRORREP\UserDumps on Win2003
