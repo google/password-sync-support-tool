@@ -429,7 +429,7 @@ End Function
 'Compare XMLs across all servers
 'Decode proxy/WinHTTP settings if possible, for example http://p0w3rsh3ll.wordpress.com/2012/10/07/getsetclear-proxy/
 'Verify that the BaseDN is correct for this domain
-'Get relevant events from Windows Event Logs
+'Get relevant events from Windows Event Logs using "wevtutil"
 'Get minidump files: %temp%\WER* folder on Win2008, C:\WINDOWS\pchealth\ERRORREP\UserDumps on Win2003
 'v3:
 'Verify that the user used for querying in the XML has correct permissions (warn on every user/OU for which they can't see the "mail" attribute)
