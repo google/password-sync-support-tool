@@ -412,6 +412,7 @@ Function ByteArrToHexString(bytes)
 End Function
  
 'Plans For the future:
+'Support non-English systems (i.e. where folder paths are not in English).
 'Report which machine the tool is running on
 'Gracefully handle case when not running the script as a domain user
 'Make an HTML report instead of just collecting text files
