@@ -281,6 +281,14 @@ Sub RunDiagnostics(CompName)
   RunCopyCommand "\\" & CompName & "\c$\Documents and Settings\NetworkService\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\password_sync_service", _
                  "Service2003"
 
+  ' C:\Windows\ServiceProfiles\NetworkService\AppData\Local\Google\Identity
+  RunCopyCommand "\\" & CompName & "\c$\Windows\ServiceProfiles\NetworkService\AppData\Local\Google\Identity", _
+                 "ServiceAuth2008"
+
+  'C:\Documents and Settings\NetworkService\Local Settings\Application Data\Google\Identity
+  RunCopyCommand "\\" & CompName & "\c$\Documents and Settings\NetworkService\Local Settings\Application Data\Google\Identity", _
+                 "ServiceAuth2003"
+
   ' C:\WINDOWS\system32\config\systemprofile\AppData\Local\Google\Google Apps Password Sync\Tracing\lsass
   RunCopyCommand "\\" & CompName & "\c$\WINDOWS\system32\config\systemprofile\AppData\Local\Google\Google Apps Password Sync\Tracing\lsass", _
                  "DLL2008"
