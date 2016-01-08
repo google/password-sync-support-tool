@@ -210,6 +210,24 @@ Sub ErrorMsgBox(Text)
          "Google Apps Password Sync diagnostics tool"
 End Sub
 
+Sub RunCommand(Command, OutputFileNameBase)
+  On Error Resume Next
+
+  ' Always use bWaitOnReturn=True to make sure the subpreoccess returns after
+  ' all data was collected.
+  objShell.Run "cmd /c " & Command & " 1>>" & OutputFileNameBase & ".txt " & _
+                   "2>>" & OutputFileNameBase & ".err", _
+               0, _
+               True
+  PrintErrorIfNeeded "Running command '" & Command & "' failed. "
+End Sub
+
+Sub RunCopyCommand(Source, Target)
+  RunCommand "xcopy """ & Source & """ """ & Target & """ " & _
+                 "/C /E /F /H /Y /I /G", _
+             "copying"
+End Sub
+
 ' Run diagnostics on remote machines
 Sub RunDiagnostics(CompName)
   On Error Resume Next
@@ -219,63 +237,82 @@ Sub RunDiagnostics(CompName)
   PrintLine "Starting diagnostics on " & CompName
   objShell.CurrentDirectory = LogDir  ' Change current directory
   PrintErrorIfNeeded "Error changing to work folder for this DC file: "
+
   PrintLine "Getting Notification Package DLL reg entry - dll-reg.txt"
-  objShell.Run "cmd /c reg query \\" & CompName & "\HKLM\SYSTEM\CurrentControlSet\Control\Lsa /v ""Notification Packages"" 1>dll-reg.txt 2>dll-reg.err", 0
-  PrintErrorIfNeeded ""
-  PrintLine "Getting tasklist.exe output to see if DLL is loaded - dll-loaded.txt"
-  ' TODO: Verify support for Windows Server 2012
-  objShell.Run "cmd /c tasklist /S " & CompName & " /m password_sync_dll.dll 1>dll-loaded.txt 2>dll-loaded.err", 0
-  PrintErrorIfNeeded ""
+  RunCommand "reg query \\" & CompName & _
+                 "\HKLM\SYSTEM\CurrentControlSet\Control\Lsa " & _
+                 "/v ""Notification Packages""", _
+             "dll-reg"
+
+  PrintLine "Running tasklist.exe to see if the DLL is loaded - dll-loaded.txt"
+  RunCommand "tasklist /S " & CompName & " /m password_sync_dll.dll", _
+             "dll-loaded"
+
   PrintLine "Getting service status - service.txt"
-  objShell.Run "cmd /c sc \\" & CompName & " query ""Google Apps Password Sync"" 1>service.txt 2>service.err", 0
-  PrintErrorIfNeeded ""
+  RunCommand "sc \\" & CompName & " query ""Google Apps Password Sync""", _
+             "service"
+
   ' Get logs (from default locations - v1) using XCOPY to get the full tree
-  ' Assume the username is the same as the current username for the UI logs. Doesn't matter for the others.
-  ' bWaitOnReturn=True so we don't open too many connections at a time.
+  ' Assume the username is the same as the current username for the UI logs.
+  ' It doesn't matter for the other paths (they don't depend on the username).
   PrintLine "Copying logs and XML - copying.txt"
+
   ' C:\Users\username\AppData\Local\Google\Google Apps Password Sync\Tracing\GoogleAppsPasswordSync
-  objShell.Run "cmd /c xcopy ""\\" & CompName & "\c$\Users\%username%\AppData\Local\Google\Google Apps Password Sync\Tracing\GoogleAppsPasswordSync"" UI2008 /C /E /F /H /Y /I 1>copying.txt 2>copying.err", 0, True
-  PrintErrorIfNeeded ""
+  RunCopyCommand "\\" & CompName & "\c$\Users\%username%\AppData\Local\Google\Google Apps Password Sync\Tracing\GoogleAppsPasswordSync", _
+                 "UI2008"
+
   ' C:\Documents and Settings\username\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\GoogleAppsPasswordSync
-  objShell.Run "cmd /c xcopy ""\\" & CompName & "\c$\Documents and Settings\%username%\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\GoogleAppsPasswordSync"" UI2003 /C /E /F /H /Y /I /G 1>>copying.txt 2>>copying.err", 0, True
-  PrintErrorIfNeeded ""
+  RunCopyCommand "\\" & CompName & "\c$\Documents and Settings\%username%\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\GoogleAppsPasswordSync", _
+                 "UI2003"
+
   ' C:\Users\username\AppData\Local\Google\Identity
-  objShell.Run "cmd /c xcopy ""\\" & CompName & "\c$\Users\%username%\AppData\Local\Google\Identity"" Identity2008 /C /E /F /H /Y /I /G 1>>copying.txt 2>>copying.err", 0, True
-  PrintErrorIfNeeded ""
+  RunCopyCommand "\\" & CompName & "\c$\Users\%username%\AppData\Local\Google\Identity", _
+                 "Identity2008"
+
   ' C:\Documents and Settings\username\Local Settings\Application Data\Google\Identity
-  objShell.Run "cmd /c xcopy ""\\" & CompName & "\c$\Documents and Settings\username\Local Settings\Application Data\Google\Identity"" Identity2003 /C /E /F /H /Y /I /G 1>>copying.txt 2>>copying.err", 0, True
-  PrintErrorIfNeeded ""
+  RunCopyCommand "\\" & CompName & "\c$\Documents and Settings\username\Local Settings\Application Data\Google\Identity", _
+                 "Identity2003"
+
   ' C:\Windows\ServiceProfiles\NetworkService\AppData\Local\Google\Google Apps Password Sync\Tracing\password_sync_service
-  objShell.Run "cmd /c xcopy ""\\" & CompName & "\c$\Windows\ServiceProfiles\NetworkService\AppData\Local\Google\Google Apps Password Sync\Tracing\password_sync_service"" Service2008 /C /E /F /H /Y /I /G 1>>copying.txt 2>>copying.err", 0, True
-  PrintErrorIfNeeded ""
+  RunCopyCommand "\\" & CompName & "\c$\Windows\ServiceProfiles\NetworkService\AppData\Local\Google\Google Apps Password Sync\Tracing\password_sync_service", _
+                 "Service2008"
+
   'C:\Documents and Settings\NetworkService\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\password_sync_service
-  objShell.Run "cmd /c xcopy ""\\" & CompName & "\c$\Documents and Settings\NetworkService\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\password_sync_service"" Service2003 /C /E /F /H /Y /I /G 1>>copying.txt 2>>copying.err", 0, True
-  PrintErrorIfNeeded ""
+  RunCopyCommand "\\" & CompName & "\c$\Documents and Settings\NetworkService\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\password_sync_service", _
+                 "Service2003"
+
   ' C:\WINDOWS\system32\config\systemprofile\AppData\Local\Google\Google Apps Password Sync\Tracing\lsass
-  objShell.Run "cmd /c xcopy ""\\" & CompName & "\c$\WINDOWS\system32\config\systemprofile\AppData\Local\Google\Google Apps Password Sync\Tracing\lsass"" DLL2008 /C /E /F /H /Y /I /G 1>>copying.txt 2>>copying.err", 0, True
-  PrintErrorIfNeeded ""
+  RunCopyCommand "\\" & CompName & "\c$\WINDOWS\system32\config\systemprofile\AppData\Local\Google\Google Apps Password Sync\Tracing\lsass", _
+                 "DLL2008"
+
   'C:\WINDOWS\system32\config\systemprofile\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\lsass
-  objShell.Run "cmd /c xcopy ""\\" & CompName & "\c$\WINDOWS\system32\config\systemprofile\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\lsass"" DLL2003 /C /E /F /H /Y /I /G 1>>copying.txt 2>>copying.err", 0, True
-  PrintErrorIfNeeded ""
+  RunCopyCommand "\\" & CompName & "\c$\WINDOWS\system32\config\systemprofile\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\lsass", _
+                 "DLL2003"
+
   ' C:\ProgramData\Google\Google Apps Password Sync\config.xml
-  objShell.Run "cmd /c xcopy ""\\" & CompName & "\c$\ProgramData\Google\Google Apps Password Sync\config.xml"" /C /E /F /H /Y /I /G 1>>copying.txt 2>>copying.err", 0, True
-  PrintErrorIfNeeded ""
+  RunCopyCommand "\\" & CompName & "\c$\ProgramData\Google\Google Apps Password Sync\config.xml", _
+                 "."
+
   ' C:\Documents and Settings\All Users\Application Data\Google\Google Apps Password Sync\config.xml
-  objShell.Run "cmd /c xcopy ""\\" & CompName & "\c$\Documents and Settings\All Users\Application Data\Google\Google Apps Password Sync\config.xml"" /C /E /F /H /Y /I /G 1>>copying.txt 2>>copying.err", 0, True
-  PrintErrorIfNeeded ""
-  ' Get install path for GAPS (x86 indicates that the x86 version was installed on x64 - won't work)
-  ' Just search for the files in both possible paths.
+  RunCopyCommand "\\" & CompName & "\c$\Documents and Settings\All Users\Application Data\Google\Google Apps Password Sync\config.xml", _
+                 "."
+
+  ' Get install path for GAPS (x86 indicates that the x86 version was installed
+  ' on x64 - won't work). Just search for the files in both possible paths.
   PrintLine "Getting list of installed files - install.txt and instx86.txt"
-  objShell.Run "cmd /c dir ""\\" & CompName & "\c$\Program Files\Google\Google Apps Password Sync"" /B /S 1>install.txt 2>install.err", 0
-  PrintErrorIfNeeded ""
-  objShell.Run "cmd /c dir ""\\" & CompName & "\c$\Program Files (x86)\Google\Google Apps Password Sync"" /B /S 1>instx86.txt 2>instx86.err", 0
-  PrintErrorIfNeeded ""
+  RunCommand "dir ""\\" & CompName & "\c$\Program Files\Google\Google Apps Password Sync"" /B /S", _
+             "install"
+  RunCommand "dir ""\\" & CompName & "\c$\Program Files (x86)\Google\Google Apps Password Sync"" /B /S", _
+             "instx86"
+
   PrintLine "Geting system-wide proxy settings dump from registry - proxy.txt"
-  objShell.Run "cmd /c reg query ""\\" & CompName & "\HKLM\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings"" /v ProxySettingsPerUser 1>proxy.txt 2>proxy.err", 0
-  PrintErrorIfNeeded ""
-  PrintLine "Geting system-wide WinHTTP settings dump from registry - winhttp.txt"
-  objShell.Run "cmd /c reg query ""\\" & CompName & "\HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\Connections"" /v WinHttpSettings 1>winhttp.txt 2>winhttp.err", 0
-  PrintErrorIfNeeded ""
+  RunCommand "reg query ""\\" & CompName & "\HKLM\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings"" /v ProxySettingsPerUser", _
+             "proxy"
+
+  PrintLine "Getting system-wide WinHTTP settings dump from registry - winhttp.txt"
+  RunCommand "reg query ""\\" & CompName & "\HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\Connections"" /v WinHttpSettings", _
+             "winhttp"
+
   ' Get remote system time using http://blogs.technet.com/b/heyscriptingguy/archive/2007/03/08/how-can-i-verify-the-system-time-on-a-remote-computer.aspx
   PrintLine "Getting local time on remote machine"
   Set objWMIService = GetObject("winmgmts:\\" & CompName & "\root\cimv2")
@@ -297,6 +334,7 @@ Sub RunDiagnostics(CompName)
   Next
   PrintErrorIfNeeded "Error converting time: "
   Err.Clear
+
   PrintLine "Finished diagnostics on " & CompName
 End Sub
 
