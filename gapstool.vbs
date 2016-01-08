@@ -54,7 +54,9 @@ fso.CreateFolder TempDir
 LogStr "A:Starting GAPS support tool version " & Ver & " from " & _
     WScript.ScriptFullName
 
-' Check whether the current user is a Domain Admin, quit if we are not
+' Check whether the current user is a Domain Admin and other machine/user
+' settings.
+If Not CheckComputerAndUserDetails Then WScript.Quit
 If Not CheckIfRunningAsDomainAdmin Then WScript.Quit
 
 
@@ -174,6 +176,7 @@ MsgBox Message, vbOKOnly, "Google Apps Password Sync diagnostics tool"
 WScript.Echo "Press Enter to close this window"
 WScript.StdIn.Read(1)
 
+
 Sub LogStr(str)
   Dim LogFile  ' As Stream
   Set LogFile = fso.OpenTextFile(LogFileName, ForAppending, True)
@@ -199,6 +202,12 @@ End Sub
 
 Sub LogErrorIfNeeded(Text)
   If Err <> 0 Then LogStr "E:" & Text & ": " & LogErr
+End Sub
+
+Sub ErrorMsgBox(Text)
+  MsgBox "Error: " & Text, _
+         vbOKOnly Or vbExclamation, _
+         "Google Apps Password Sync diagnostics tool"
 End Sub
 
 ' Run diagnostics on remote machines
@@ -345,6 +354,65 @@ Function GetWritableDCs()
   GetWritableDCs = DCs
 End Function
 
+' This function is based on the sample from
+' http://www.vbsedit.com/scripts/desktop/info/scr_231.asp
+Function CheckComputerAndUserDetails()
+  On Error Resume Next
+
+  Set objWMIService = GetObject("winmgmts:\\.\root\CIMV2")
+  LogErrorIfNeeded "Getting WMI service object for computer details"
+  Set colItems = objWMIService.ExecQuery("SELECT * FROM Win32_ComputerSystem")
+  LogErrorIfNeeded "Executing WMI query for computer details"
+  For Each objItem In colItems
+    LogStr "A:Computer Name: " & objItem.Name
+    LogStr "A:Computer's Domain: " & objItem.Domain
+    LogStr "A:Part Of Domain: " & objItem.PartOfDomain
+    Select Case objItem.DomainRole
+      Case 0 strDomainRole = "Standalone Workstation"
+      Case 1 strDomainRole = "Member Workstation"
+      Case 2 strDomainRole = "Standalone Server"
+      Case 3 strDomainRole = "Member Server"
+      Case 4 strDomainRole = "Backup Domain Controller"
+      Case 5 strDomainRole = "Primary Domain Controller"
+      Case Else strDomainRole = "Unknown (" & objItem.DomainRole & ")"
+    End Select
+    LogStr "A:Computer's Domain Role: " & strDomainRole
+    LogStr "A:Computer's Roles: " & Join(objItem.Roles, ", ")
+
+    If Not objItem.PartOfDomain Then
+      LogStr "E:This machine isn't part of a domain. Exiting."
+      ErrorMsgBox "This machine isn't part of a domain. Make sure you " & _
+                  "are logged in as a domain admin, and run this tool again."
+      CheckComputerAndUserDetails = False
+      Exit Function
+    End If
+    UserName = objShell.ExpandEnvironmentStrings("%USERNAME%")
+    LogStr "A:Current user's name: " & UserName
+    UserDNSDomain = LCase(objShell.ExpandEnvironmentStrings("%USERDNSDOMAIN%"))
+    If UserDNSDomain = "%userdnsdomain%" Then
+      LogStr "E:The logged in user isn't a domain user. Exiting."
+      ErrorMsgBox "The logged in user (" & UserName & ") isn't a domain " & _
+                  "user. Make sure you are logged in as a domain admin, " & _
+                  "and run this tool again."
+      CheckComputerAndUserDetails = False
+      Exit Function
+    End If
+    LogStr "A:Current user's AD DNS domain: " & UserDNSDomain
+    If LCase(objItem.Domain) <> UserDNSDomain Then
+      LogStr "E:The user's domain doesn't match the machine's domain. Exiting."
+      ErrorMsgBox "The current user's DNS domain (" & UserDNSDomain & _
+                  ") doesn't match the machine's DNS domain (" & _
+                  objItem.Domain & "). This will cause Google Apps " & _
+                  "Password Sync to fail. Make sure you are logged in as a " & _
+                  "domain admin from the same domain as the Domain " & _
+                  "Controller, and try the installation again."
+      CheckComputerAndUserDetails = False
+      Exit Function
+    End If
+  Next
+  CheckComputerAndUserDetails = True
+End Function
+
 ' This function is based on
 ' http://www.aspfree.com/c/a/Windows-Scripting/Compressed-Folders-in-WSH/
 Function CompressFolder(strPath, strFolder)
@@ -429,20 +497,18 @@ Function CheckIfRunningAsDomainAdmin()
     LogStr "A:The current user is a member of Domain Admins"
   Else
     LogStr "E:The current user is *not* a member of Domain Admins"
-    MsgBox "Warning: The current user isn't a member of the Domain Admins " & _
-               "group. To successfully install and setup Google Apps " & _
-               "Password Sync, you must be a Domain Admin." & _
-               vbNewLine & vbNewLine & _
-               "Please contact a Domain Admin to continue. You can try " & _
-               "running this command, it may add you to the Domain Admins " & _
-               "group:" & vbNewLine & vbNewLine & _
-               "net group ""Domain Admins"" " & _
-               objShell.ExpandEnvironmentStrings("%username%") & " /add" & _
-               vbNewLine & vbNewLine & _
-               "After joining the Domain Admins group, log out and back " & _
-               "in, and try again.", _
-           vbOKOnly Or vbExclamation, _
-           "Google Apps Password Sync diagnostics tool"
+    ErrorMsgBox "The current user isn't a member of the Domain Admins " & _
+                "group. To successfully install and setup Google Apps " & _
+                "Password Sync, you must be a Domain Admin." & _
+                vbNewLine & vbNewLine & _
+                "Please contact a Domain Admin to continue. You can try " & _
+                "running this command, it may add you to the Domain Admins " & _
+                "group:" & vbNewLine & vbNewLine & _
+                "net group ""Domain Admins"" " & _
+                objShell.ExpandEnvironmentStrings("%username%") & " /add" & _
+                vbNewLine & vbNewLine & _
+                "After joining the Domain Admins group, log out and back " & _
+                "in, and try again."
     ' TODO: Get the correct sAMAccountName for Domain Admins, as it may have
     ' been localized... It can be obtained using:
     ' GetObject("LDAP://<SID=" & ByteArrToHexString(objectSid) & ">").Get("sAMAccountName")
