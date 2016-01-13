@@ -20,12 +20,10 @@ Dim fso, objShell
 Set fso = WScript.CreateObject("Scripting.FileSystemObject")
 Set objShell = WScript.CreateObject("Wscript.Shell")
 Const ForReading = 1, ForWriting = 2, ForAppending = 8
-Const WshFailed = 2
-Const WshFinished = 1
-Const WshRunning = 0
+Const WshRunning = 0, WshFinished = 1, WshFailed = 2
 
 ' Force running in a console window
-If Not UCase(Right(WScript.FullName, 12))="\CSCRIPT.EXE" Then
+If Not UCase(Right(WScript.FullName, 12)) = "\CSCRIPT.EXE" Then
   objShell.Run "cscript //nologo """ & WScript.ScriptFullName & """"
   WScript.Quit
 End If
@@ -52,7 +50,7 @@ fso.DeleteFolder TempDir, True
 fso.CreateFolder TempDir
 
 LogStr "A:Starting GAPS support tool version " & Ver & " from " & _
-    WScript.ScriptFullName
+       WScript.ScriptFullName
 
 ' Check whether the current user is a Domain Admin and other machine/user
 ' settings.
@@ -94,9 +92,11 @@ For i = 0 To UBound(arrWritableDCs)
   WScript.Sleep 100
   ' Open the output file.
   Set arrOutFiles(i) = _
-      fso.OpenTextFile(TempDir & "\" & arrWritableDCs(i) & ".txt",ForReading, 0)
+      fso.OpenTextFile(TempDir & "\" & arrWritableDCs(i) & ".txt", _
+                       ForReading, _
+                       0)
   LogErrorIfNeeded "Error opening job output file"
-Next  ' i
+Next
 
 ' Process output from all instances until they're all gone
 Dim NumCompleted
@@ -111,7 +111,7 @@ While NumCompleted <= UBound(arrWritableDCs)
       ' TODO: Improve logging here - some text files aren't being read on
       ' domains with many DCs
       ' As long as we have full lines...
-      While InStr(arrBuffers(i),vbNewLine) > 0
+      While InStr(arrBuffers(i), vbNewLine) > 0
         If InStr(arrBuffers(i), vbNewLine) > 1 Then
           LogStr "A:Job " & arrWritableDCs(i) & ": " & _
                  Left(arrBuffers(i), InStr(arrBuffers(i), vbNewLine) - 1)
@@ -127,7 +127,7 @@ While NumCompleted <= UBound(arrWritableDCs)
         Err.Clear  ' Ignore reading errors
         If Len(arrBuffers(i)) > 0 Then
           Dim arrTemp
-          arrTemp=Split(arrBuffers(i), vbNewLine)
+          arrTemp = Split(arrBuffers(i), vbNewLine)
           For j = 0 To UBound(arrTemp)
             If Len(arrTemp(j)) > 0 Then
               LogStr "A:Job " & arrWritableDCs(i) & ": " & arrTemp(j)
@@ -150,13 +150,6 @@ While NumCompleted <= UBound(arrWritableDCs)
     End If
   Next  ' i
 Wend
-' Report on dll reg/dll loaded/service started issues
-' Compare XMLs - they should be identical
-' Compare system times if possible
-' Ask if there a specific user whose password sync failed
-' Ask when they tried to change their password
-' Get their pwdLastSet, sAMAccountName and "mail" (based on XML)
-' Report when user last changed pwd and if they don't have email address
 
 LogStr "A:Finished collecting information, creating ZIP"
 
@@ -166,7 +159,7 @@ ZipName = "GAPSTool-report_" & _
           Year(Now) & Right("0" & Month(Now), 2) & Right("0" & Day(Now), 2) & _
           "_" & _
           Right("0" & Hour(Now), 2) & Right("0" & Minute(Now), 2) & _
-          Right("0" & Second(Now) ,2) & ".zip"
+          Right("0" & Second(Now), 2) & ".zip"
 CompressFolder objShell.SpecialFolders("Desktop") & "\" & ZipName, TempDir
 Message = "Please send the file """ & ZipName & _
           """ from your Desktop to Google for Work Support for investigation."
@@ -538,7 +531,7 @@ Function CheckIfRunningAsDomainAdmin()
       Exit For
     End If
     LogErrorIfNeeded "Error checking SID " & tmpstr
-  Next  ' sid
+  Next
   If CheckIfRunningAsDomainAdmin Then
     LogStr "A:The current user is a member of Domain Admins"
   Else
@@ -588,28 +581,20 @@ End Function
 
 ' Plans For the future:
 ' Support non-English systems (i.e. where folder paths are not in English).
-' Report which machine the tool is running on
-' Gracefully handle case when not running the script as a domain user
 ' Make an HTML report instead of just collecting text files
 ' Support paths on upgraded systems such as "C:\WINNT\Profiles\All Users\Application Data\\Google\Google Apps Password Sync\config.xml" etc.
-' Make sure all info gathering tasks are done before wrapping up each DC.
 ' Offer to restart DCs whose DLL is registered but not loaded, if not the current server
 ' Offer to start the service is it's stopped
-' Fix UAC elevation in VBS or remove references to it as it's handled by AutoIt wrapper
 ' Ask which username is affected and get their LDIF dump, and correlate their pwdLastSet to appearance in the logs - this can tell us if the issue is with the service, the DLL, etc.
 ' Get the user's LDIF dump using the credentials detailed in the XML
 ' Try to find password change events in the Event Log for that user to see where password change occurred
-' If anonymous access is enabled in the XML, check if it's allowed in AD
 ' If any of the log files are missing, collect the ACL of that folder (in case there are no permissions for the service user to create the logs). Offer to fix.
 ' Ask what user was used to install on the other DCs so that we can get the correct path for UI logs, instead of guessing
 ' Compare XMLs across all servers
 ' Decode proxy/WinHTTP settings if possible, for example http://p0w3rsh3ll.wordpress.com/2012/10/07/getsetclear-proxy/
-' Verify that the BaseDN is correct for this domain
 ' Get relevant events from Windows Event Logs using "wevtutil"
 ' Get minidump files: %temp%\WER* folder on Win2008, C:\WINDOWS\pchealth\ERRORREP\UserDumps on Win2003
 ' Check certificates using certutil -store \\SERVERNAME\AuthRoot | find "Equifax" (or something similar)
-' v3:
-' Verify that the user used for querying in the XML has correct permissions (warn on every user/OU for which they can't see the "mail" attribute)
 ' Compare time across DCs
 ' Compare time to google.com
 
