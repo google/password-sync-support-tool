@@ -1,4 +1,4 @@
-##1. [Download the GAPS Support Tool](gapstool.exe?raw=true)
+##1. [Download the GAPS Support Tool](https://github.com/google/gaps-support-tool/releases/download/1.0.1/gapstool.exe)
 
 ###2. Upload the file it creates to the [log analyzer](https://toolbox.googleapps.com/apps/loganalyzer/?productid=gaps)
 
