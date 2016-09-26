@@ -10,17 +10,20 @@
 ' distributed under the License is distributed on an "AS IS" BASIS,
 ' WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ' See the License for the specific language governing permissions and
-' limitations under the License.
+' limitations under the License.
+
 ' GAPS diagnostics tool
 ' Liron Newman lironn@google.com
 
 ' Do not change this line's format, build.bat relies on it.
-Const Ver = "1.0.1.0"
+Const Ver = "1.0.1.0"
+
 Dim fso, objShell
 Set fso = WScript.CreateObject("Scripting.FileSystemObject")
 Set objShell = WScript.CreateObject("Wscript.Shell")
 Const ForReading = 1, ForWriting = 2, ForAppending = 8
 Const WshRunning = 0, WshFinished = 1, WshFailed = 2
+Const HKEY_LOCAL_MACHINE = &H80000002  ' From https://msdn.microsoft.com/en-us/library/aa394600(v=vs.85).aspx?cs-lang=vb
 
 ' Force running in a console window
 If Not UCase(Right(WScript.FullName, 12)) = "\CSCRIPT.EXE" Then
@@ -221,6 +224,67 @@ Sub RunCopyCommand(Source, Target)
              "copying"
 End Sub
 
+Sub DecodeWinHTTPSettings(CompName, OutputFilePath)
+  ' Create a WMI StdRegProv.
+  Dim objStdRegProv
+  Set objStdRegProv = GetObject("winmgmts:{impersonationLevel=impersonate}!\\" & _
+                                CompName & "\root\default:StdRegProv")
+  PrintErrorIfNeeded "Error opening WMI StdRegProv on " & CompName & ": "
+  ' Retrieve the value of WinHTTPSettings from the registry.
+  ' Note that GetBinaryValue returns an array, where each element in the array
+  ' is a DECIMAL value of the octets.
+  Dim WinHTTPSettingsArray
+  objStdRegProv.GetBinaryValue HKEY_LOCAL_MACHINE, _
+                               "SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\Connections", _
+                               "WinHttpSettings", _
+                               WinHTTPSettingsArray
+  PrintErrorIfNeeded "Error retrieving HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\Connections\WinHttpSettings on " & CompName & ": "
+  ' The WinHttpSettings registry value appears to be formatted as follows:
+  '   Length : Description
+  '       12 : ?
+  '        1 : Length of proxy string.
+  '        3 : ?
+  '        ~ : Proxy string; variable length.
+  '        1 : Length of bypass list string.
+  '        3 : ?
+  '        ~ : Bypass list string; variable length.
+  ' Based on https://p0w3rsh3ll.wordpress.com/2012/10/07/getsetclear-proxy/.
+  ' Start by getting the proxy string length.
+  Dim WinHTTPProxyLength
+  WinHTTPProxyLength = WinHTTPSettingsArray(12)
+  ' Prepare the output file.
+  Dim WinHTTPParsedFile
+  Set WinHTTPParsedFile = fso.OpenTextFile(OutputFilePath, ForAppending, True)
+  PrintErrorIfNeeded "Error opening " & OutputFilePath & " on " & CompName & ": "
+  ' If the proxy string length is greater than 0, a proxy is set. If not, the
+  ' connection is direct.
+  If WinHTTPProxyLength > 0 Then
+    Dim WinHTTPProxy, WinHTTPBypassList, WinHTTPBypassListLength
+    ' Concatenate the proxy, starting from 16, through the proxy length.
+    For Index = 16 To (16 + WinHTTPProxyLength - 1)
+      WinHTTPProxy = WinHTTPProxy & ChrW(WinHTTPSettingsArray(Index))
+    Next
+    ' Get the bypass list string length. We know it's position is 12 + 1 + 3 + the
+    ' length of the proxy string. 
+    WinHTTPBypassListLength = WinHTTPSettingsArray((16 + WinHTTPProxyLength))
+    ' If the length of the list is greater than 0, concatenate it.
+    If WinHTTPBypassListLength > 0 Then
+      ' Start from 12 + 1 + 3 + proxy string length + 1 + 3.
+      For Index = (20 + WinHTTPProxyLength) To (20 + WinHTTPProxyLength + WinHTTPBypassListLength - 1)
+        WinHTTPBypassList = WinHTTPBypassList & ChrW(WinHTTPSettingsArray(Index))
+      Next
+    Else
+      WinHTTPBypassList = "(none)"
+    End If
+    PrintErrorIfNeeded "Error decoding WinHttpSettings on " & CompName & ": "
+    WinHTTPParsedFile.WriteLine "Current WinHTTP proxy settings:" & vbCRLF & vbCRLF & "    Proxy Server(s) :  " & WinHTTPProxy & vbCRLF & "    Bypass List     :  " & WinHTTPBypassList
+  Else
+    WinHTTPParsedFile.WriteLine "Current WinHTTP proxy settings:" & vbCRLF & vbCRLF & "    Direct access (no proxy server)."
+  End If
+  PrintErrorIfNeeded "Error writing to " & OutputFilePath & " on " & CompName & ": "
+  WinHTTPParsedFile.Close
+End Sub
+
 ' Run diagnostics on remote machines
 Sub RunDiagnostics(CompName)
   On Error Resume Next
@@ -306,13 +370,16 @@ Sub RunDiagnostics(CompName)
   RunCommand "dir ""\\" & CompName & "\c$\Program Files (x86)\Google\Google Apps Password Sync"" /B /S", _
              "instx86"
 
-  PrintLine "Geting system-wide proxy settings dump from registry - proxy.txt"
+  PrintLine "Getting system-wide proxy settings dump from registry - proxy.txt"
   RunCommand "reg query ""\\" & CompName & "\HKLM\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings"" /v ProxySettingsPerUser", _
              "proxy"
 
   PrintLine "Getting system-wide WinHTTP settings dump from registry - winhttp.txt"
   RunCommand "reg query ""\\" & CompName & "\HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\Connections"" /v WinHttpSettings", _
              "winhttp"
+
+  PrintLine "Getting system-wide WinHTTP settings dump from registry, and decoding - winhttp_decoded.txt"
+  DecodeWinHTTPSettings CompName, "winhttp_decoded.txt"
 
   ' Get remote system time using http://blogs.technet.com/b/heyscriptingguy/archive/2007/03/08/how-can-i-verify-the-system-time-on-a-remote-computer.aspx
   PrintLine "Getting local time on remote machine"
@@ -591,10 +658,8 @@ End Function
 ' If any of the log files are missing, collect the ACL of that folder (in case there are no permissions for the service user to create the logs). Offer to fix.
 ' Ask what user was used to install on the other DCs so that we can get the correct path for UI logs, instead of guessing
 ' Compare XMLs across all servers
-' Decode proxy/WinHTTP settings if possible, for example http://p0w3rsh3ll.wordpress.com/2012/10/07/getsetclear-proxy/
 ' Get relevant events from Windows Event Logs using "wevtutil"
 ' Get minidump files: %temp%\WER* folder on Win2008, C:\WINDOWS\pchealth\ERRORREP\UserDumps on Win2003
 ' Check certificates using certutil -store \\SERVERNAME\AuthRoot | find "Equifax" (or something similar)
 ' Compare time across DCs
 ' Compare time to google.com
-
