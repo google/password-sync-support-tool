@@ -2,5 +2,5 @@
 # This .gitignore file was automatically created by Microsoft(R) Visual Studio.
 ################################################################################
 
-/build/gapstool.exe
-/build/gapstool_x64.exe
+/build/gspstool.exe
+/build/gspstool_x64.exe
