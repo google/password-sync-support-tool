@@ -14,7 +14,7 @@ rem WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 rem See the License for the specific language governing permissions and
 rem limitations under the License.
 
-echo Build GAPSTool's EXE files using Aut2Exe (https://www.autoitscript.com/site/autoit/downloads/)
+echo Build GSPSTool's EXE files using Aut2Exe (https://www.autoitscript.com/site/autoit/downloads/)
 
 echo Liron Newman lironn@google.com
 
@@ -26,18 +26,18 @@ rem Find the version number by searching for the version set in the VBS file.
 for /f "tokens=4" %%a IN ('findstr /R /B /C:"Const Ver = \"[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*\"" gapstool.vbs') DO set ver=%%a
 rem Strip the double quotes (") from the version number.
 set ver=%ver:"=%
-echo Going to built GAPSTool version %ver%...
+echo Going to build GSPSTool version %ver%...
 
 rem Generate the build commandline.
-set buildcmd=..\..\tools\autoit\Aut2Exe\Aut2Exe.exe /in gapstool.au3 /icon pictographs-fire_extinguisher_inv.ico /comp 4 /pack /gui /execlevel requireadministrator /companyname Google /productname "GAPS support tool" /fileversion %ver% /productversion %ver%
+set buildcmd=..\..\tools\autoit\Aut2Exe\Aut2Exe.exe /in gapstool.au3 /icon pictographs-fire_extinguisher_inv.ico /comp 4 /pack /gui /execlevel requireadministrator /companyname Google /productname "GSPS support tool" /fileversion %ver% /productversion %ver%
 
 echo Build command base: %buildcmd%
 
 echo Building the x86 EXE.
-%buildcmd% /out build\gapstool.exe
+%buildcmd% /out build\gspstool.exe
 
 echo Building the x64 EXE.
-%buildcmd% /out build\gapstool_x64.exe /x64
+%buildcmd% /out build\gspstool_x64.exe /x64
 
 echo Done.
 popd
