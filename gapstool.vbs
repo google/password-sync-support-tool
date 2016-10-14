@@ -12,13 +12,13 @@
 ' See the License for the specific language governing permissions and
 ' limitations under the License.
 
-' GAPS diagnostics tool
+' GSPS diagnostics tool
 ' Liron Newman lironn@google.com
 
 ' Do not change this line's format, build.bat relies on it.
-Const Ver = "1.0.1.0"
+Const Ver = "2.0.0.0"
 
-Dim fso, objShell
+Dim fso, objShell, CurrentComputerName
 Set fso = WScript.CreateObject("Scripting.FileSystemObject")
 Set objShell = WScript.CreateObject("Wscript.Shell")
 Const ForReading = 1, ForWriting = 2, ForAppending = 8
@@ -34,8 +34,12 @@ End If
 On Error Resume Next  ' Errors will be handled by code
 
 Dim LogFileName, TempDir
-TempDir = objShell.ExpandEnvironmentStrings("%temp%\GAPSTool")
-LogFileName = TempDir & "\GAPSTool.log"
+TempDir = objShell.ExpandEnvironmentStrings("%temp%\GSPSTool")
+' We can assume %userdnsdomain% is the computer's DNS domain too, because we
+' enforce it in CheckComputerAndUserDetails().
+CurrentComputerName = _
+    UCase(objShell.ExpandEnvironmentStrings("%computername%.%userdnsdomain%"))
+LogFileName = TempDir & "\GSPSTool.log"
 ' Check if this instance was executed to diagnose a DC
 If WScript.Arguments.Count > 1 Then
   ' Note that this will break commandline arguments if we plan to use them in
@@ -52,7 +56,7 @@ fso.DeleteFolder TempDir, True
 ' Create new temporary folder
 fso.CreateFolder TempDir
 
-LogStr "A:Starting GAPS support tool version " & Ver & " from " & _
+LogStr "A:Starting GSPS support tool version " & Ver & " from " & _
        WScript.ScriptFullName
 
 ' Check whether the current user is a Domain Admin and other machine/user
@@ -110,7 +114,7 @@ While NumCompleted <= UBound(arrWritableDCs)
     ' We set completed Execs to Null, so we can skip them.
     If Not IsNull(arrExec(i)) Then
       arrBuffers(i) = arrBuffers(i) & arrOutFiles(i).Read(1)
-      Err.Clear 'Ignore "Input past end of file" errors
+      Err.Clear  ' Ignore "Input past end of file" errors
       ' TODO: Improve logging here - some text files aren't being read on
       ' domains with many DCs
       ' As long as we have full lines...
@@ -158,16 +162,16 @@ LogStr "A:Finished collecting information, creating ZIP"
 
 ' Create ZIP with reports
 Dim ZipName
-ZipName = "GAPSTool-report_" & _
+ZipName = "GSPSTool-report_" & _
           Year(Now) & Right("0" & Month(Now), 2) & Right("0" & Day(Now), 2) & _
           "_" & _
           Right("0" & Hour(Now), 2) & Right("0" & Minute(Now), 2) & _
           Right("0" & Second(Now), 2) & ".zip"
 CompressFolder objShell.SpecialFolders("Desktop") & "\" & ZipName, TempDir
 Message = "Please send the file """ & ZipName & _
-          """ from your Desktop to Google for Work Support for investigation."
+          """ from your Desktop to Google Cloud Support for investigation."
 WScript.Echo VbNewLine & Message
-MsgBox Message, vbOKOnly, "Google Apps Password Sync diagnostics tool"
+MsgBox Message, vbOKOnly, "G Suite Password Sync diagnostics tool"
 
 WScript.Echo "Press Enter to close this window"
 WScript.StdIn.Read(1)
@@ -203,7 +207,7 @@ End Sub
 Sub ErrorMsgBox(Text)
   MsgBox "Error: " & Text, _
          vbOKOnly Or vbExclamation, _
-         "Google Apps Password Sync diagnostics tool"
+         "G Suite Password Sync diagnostics tool"
 End Sub
 
 Sub RunCommand(Command, OutputFileNameBase)
@@ -211,6 +215,7 @@ Sub RunCommand(Command, OutputFileNameBase)
 
   ' Always use bWaitOnReturn=True to make sure the subpreoccess returns after
   ' all data was collected.
+  PrintLine "Running command: " & Command
   objShell.Run "cmd /c " & Command & " 1>>" & OutputFileNameBase & ".txt " & _
                    "2>>" & OutputFileNameBase & ".err", _
                0, _
@@ -219,26 +224,49 @@ Sub RunCommand(Command, OutputFileNameBase)
 End Sub
 
 Sub RunCopyCommand(Source, Target)
+  ' Checking if we are copying from the local machine and current user.
+  ' If we are, use %userprofile% which is more reliable.
+  CurrentMachineAndUserPrefix2008 = _
+      "\\" & CurrentComputerName & "\C$\USERS\%USERNAME%\"
+  CurrentMachineAndUserPrefix2003 = _
+      "\\" & CurrentComputerName & "\C$\DOCUMENTS AND SETTINGS\%USERNAME%\"
+  If UCase(Left(Source, Len(CurrentMachineAndUserPrefix2008))) = _
+      CurrentMachineAndUserPrefix2008 Then
+    Source = "%userprofile%" & _
+             Mid(Source, Len(CurrentMachineAndUserPrefix2008))
+  ElseIf UCase(Left(Source, Len(CurrentMachineAndUserPrefix2003))) = _
+      CurrentMachineAndUserPrefix2003 Then
+    Source = "%userprofile%" & _
+             Mid(Source, Len(CurrentMachineAndUserPrefix2003))
+  End If
+
   RunCommand "xcopy """ & Source & """ """ & Target & """ " & _
                  "/C /E /F /H /Y /I /G", _
              "copying"
 End Sub
 
-Sub DecodeWinHTTPSettings(CompName, OutputFilePath)
+Sub DecodeWinHTTPSettings(CompName, OutputFileName)
+  On Error Resume Next
+
+  LogLinePrefix = "Current WinHTTP proxy settings:" & vbCRLF & vbCRLF
   ' Create a WMI StdRegProv.
   Dim objStdRegProv
-  Set objStdRegProv = GetObject("winmgmts:{impersonationLevel=impersonate}!\\" & _
-                                CompName & "\root\default:StdRegProv")
+  Set objStdRegProv = GetObject( _
+      "winmgmts:{impersonationLevel=impersonate}!\\" & _
+      CompName & "\root\default:StdRegProv")
   PrintErrorIfNeeded "Error opening WMI StdRegProv on " & CompName & ": "
   ' Retrieve the value of WinHTTPSettings from the registry.
   ' Note that GetBinaryValue returns an array, where each element in the array
   ' is a DECIMAL value of the octets.
   Dim WinHTTPSettingsArray
   objStdRegProv.GetBinaryValue HKEY_LOCAL_MACHINE, _
-                               "SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\Connections", _
+                               "SOFTWARE\Microsoft\Windows\CurrentVersion\" & _
+                                   "Internet Settings\Connections", _
                                "WinHttpSettings", _
                                WinHTTPSettingsArray
-  PrintErrorIfNeeded "Error retrieving HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\Connections\WinHttpSettings on " & CompName & ": "
+  PrintErrorIfNeeded "Error retrieving HKLM\SOFTWARE\Microsoft\Windows\" & _
+      "CurrentVersion\Internet Settings\Connections\WinHttpSettings on " & _
+      CompName & ": "
   ' The WinHttpSettings registry value appears to be formatted as follows:
   '   Length : Description
   '       12 : ?
@@ -254,8 +282,8 @@ Sub DecodeWinHTTPSettings(CompName, OutputFilePath)
   WinHTTPProxyLength = WinHTTPSettingsArray(12)
   ' Prepare the output file.
   Dim WinHTTPParsedFile
-  Set WinHTTPParsedFile = fso.OpenTextFile(OutputFilePath, ForAppending, True)
-  PrintErrorIfNeeded "Error opening " & OutputFilePath & " on " & CompName & ": "
+  Set WinHTTPParsedFile = fso.OpenTextFile(OutputFileName, ForAppending, True)
+  PrintErrorIfNeeded "Error opening " & OutputFileName
   ' If the proxy string length is greater than 0, a proxy is set. If not, the
   ' connection is direct.
   If WinHTTPProxyLength > 0 Then
@@ -264,24 +292,29 @@ Sub DecodeWinHTTPSettings(CompName, OutputFilePath)
     For Index = 16 To (16 + WinHTTPProxyLength - 1)
       WinHTTPProxy = WinHTTPProxy & ChrW(WinHTTPSettingsArray(Index))
     Next
-    ' Get the bypass list string length. We know it's position is 12 + 1 + 3 + the
-    ' length of the proxy string. 
+    ' Get the bypass list string length. We know its position is 12 + 1 + 3 +
+    ' the length of the proxy string. 
     WinHTTPBypassListLength = WinHTTPSettingsArray((16 + WinHTTPProxyLength))
     ' If the length of the list is greater than 0, concatenate it.
     If WinHTTPBypassListLength > 0 Then
       ' Start from 12 + 1 + 3 + proxy string length + 1 + 3.
-      For Index = (20 + WinHTTPProxyLength) To (20 + WinHTTPProxyLength + WinHTTPBypassListLength - 1)
-        WinHTTPBypassList = WinHTTPBypassList & ChrW(WinHTTPSettingsArray(Index))
+      For Index = (20 + WinHTTPProxyLength) To _
+          (20 + WinHTTPProxyLength + WinHTTPBypassListLength - 1)
+        WinHTTPBypassList = WinHTTPBypassList & _
+                            ChrW(WinHTTPSettingsArray(Index))
       Next
     Else
       WinHTTPBypassList = "(none)"
     End If
     PrintErrorIfNeeded "Error decoding WinHttpSettings on " & CompName & ": "
-    WinHTTPParsedFile.WriteLine "Current WinHTTP proxy settings:" & vbCRLF & vbCRLF & "    Proxy Server(s) :  " & WinHTTPProxy & vbCRLF & "    Bypass List     :  " & WinHTTPBypassList
+    WinHTTPParsedFile.WriteLine LogLinePrefix & _
+        "    Proxy Server(s) :  " & WinHTTPProxy & vbCRLF & _
+        "    Bypass List     :  " & WinHTTPBypassList
   Else
-    WinHTTPParsedFile.WriteLine "Current WinHTTP proxy settings:" & vbCRLF & vbCRLF & "    Direct access (no proxy server)."
+    WinHTTPParsedFile.WriteLine LogLinePrefix & _
+        "    Direct access (no proxy server)."
   End If
-  PrintErrorIfNeeded "Error writing to " & OutputFilePath & " on " & CompName & ": "
+  PrintErrorIfNeeded "Error writing to " & OutputFileName
   WinHTTPParsedFile.Close
 End Sub
 
@@ -289,10 +322,8 @@ End Sub
 Sub RunDiagnostics(CompName)
   On Error Resume Next
 
-  Dim LogDir
-  LogDir = TempDir & "\" & CompName
   PrintLine "Starting diagnostics on " & CompName
-  objShell.CurrentDirectory = LogDir  ' Change current directory
+  objShell.CurrentDirectory = TempDir & "\" & CompName  ' Change current dir
   PrintErrorIfNeeded "Error changing to work folder for this DC file: "
 
   PrintLine "Getting Notification Package DLL reg entry - dll-reg.txt"
@@ -305,9 +336,11 @@ Sub RunDiagnostics(CompName)
   RunCommand "tasklist /S " & CompName & " /m password_sync_dll.dll", _
              "dll-loaded"
 
-  PrintLine "Getting service status - service.txt"
+  PrintLine "Getting service status - service_gaps.txt and service_gsps.txt"
   RunCommand "sc \\" & CompName & " query ""Google Apps Password Sync""", _
-             "service"
+             "service_gaps"
+  RunCommand "sc \\" & CompName & " query ""G Suite Password Sync""", _
+             "service_gsps"
 
   ' Get logs (from default locations - v1) using XCOPY to get the full tree
   ' Assume the username is the same as the current username for the UI logs.
@@ -316,43 +349,51 @@ Sub RunDiagnostics(CompName)
 
   ' C:\Users\username\AppData\Local\Google\Google Apps Password Sync\Tracing\GoogleAppsPasswordSync
   RunCopyCommand "\\" & CompName & "\c$\Users\%username%\AppData\Local\Google\Google Apps Password Sync\Tracing\GoogleAppsPasswordSync", _
-                 "UI2008"
+                 "UI"
 
   ' C:\Documents and Settings\username\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\GoogleAppsPasswordSync
   RunCopyCommand "\\" & CompName & "\c$\Documents and Settings\%username%\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\GoogleAppsPasswordSync", _
-                 "UI2003"
+                 "UI"
+
+  ' C:\Users\username\AppData\Local\Google\Google Apps Password Sync\Tracing\PasswordSync
+  RunCopyCommand "\\" & CompName & "\c$\Users\%username%\AppData\Local\Google\Google Apps Password Sync\Tracing\PasswordSync", _
+                 "UI"
+
+  ' C:\Documents and Settings\username\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\PasswordSync
+  RunCopyCommand "\\" & CompName & "\c$\Documents and Settings\%username%\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\PasswordSync", _
+                 "UI"
 
   ' C:\Users\username\AppData\Local\Google\Identity
   RunCopyCommand "\\" & CompName & "\c$\Users\%username%\AppData\Local\Google\Identity", _
-                 "Identity2008"
+                 "Identity"
 
   ' C:\Documents and Settings\username\Local Settings\Application Data\Google\Identity
   RunCopyCommand "\\" & CompName & "\c$\Documents and Settings\username\Local Settings\Application Data\Google\Identity", _
-                 "Identity2003"
+                 "Identity"
 
   ' C:\Windows\ServiceProfiles\NetworkService\AppData\Local\Google\Google Apps Password Sync\Tracing\password_sync_service
   RunCopyCommand "\\" & CompName & "\c$\Windows\ServiceProfiles\NetworkService\AppData\Local\Google\Google Apps Password Sync\Tracing\password_sync_service", _
-                 "Service2008"
+                 "Service"
 
   'C:\Documents and Settings\NetworkService\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\password_sync_service
   RunCopyCommand "\\" & CompName & "\c$\Documents and Settings\NetworkService\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\password_sync_service", _
-                 "Service2003"
+                 "Service"
 
   ' C:\Windows\ServiceProfiles\NetworkService\AppData\Local\Google\Identity
   RunCopyCommand "\\" & CompName & "\c$\Windows\ServiceProfiles\NetworkService\AppData\Local\Google\Identity", _
-                 "ServiceAuth2008"
+                 "ServiceAuth"
 
   'C:\Documents and Settings\NetworkService\Local Settings\Application Data\Google\Identity
   RunCopyCommand "\\" & CompName & "\c$\Documents and Settings\NetworkService\Local Settings\Application Data\Google\Identity", _
-                 "ServiceAuth2003"
+                 "ServiceAuth"
 
   ' C:\WINDOWS\system32\config\systemprofile\AppData\Local\Google\Google Apps Password Sync\Tracing\lsass
   RunCopyCommand "\\" & CompName & "\c$\WINDOWS\system32\config\systemprofile\AppData\Local\Google\Google Apps Password Sync\Tracing\lsass", _
-                 "DLL2008"
+                 "DLL"
 
   'C:\WINDOWS\system32\config\systemprofile\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\lsass
   RunCopyCommand "\\" & CompName & "\c$\WINDOWS\system32\config\systemprofile\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\lsass", _
-                 "DLL2003"
+                 "DLL"
 
   ' C:\ProgramData\Google\Google Apps Password Sync\config.xml
   RunCopyCommand "\\" & CompName & "\c$\ProgramData\Google\Google Apps Password Sync\config.xml", _
@@ -362,12 +403,16 @@ Sub RunDiagnostics(CompName)
   RunCopyCommand "\\" & CompName & "\c$\Documents and Settings\All Users\Application Data\Google\Google Apps Password Sync\config.xml", _
                  "."
 
-  ' Get install path for GAPS (x86 indicates that the x86 version was installed
+  ' Get install path for GSPS (x86 indicates that the x86 version was installed
   ' on x64 - won't work). Just search for the files in both possible paths.
   PrintLine "Getting list of installed files - install.txt and instx86.txt"
   RunCommand "dir ""\\" & CompName & "\c$\Program Files\Google\Google Apps Password Sync"" /B /S", _
              "install"
+  RunCommand "dir ""\\" & CompName & "\c$\Program Files\Google\G Suite Password Sync"" /B /S", _
+             "install"
   RunCommand "dir ""\\" & CompName & "\c$\Program Files (x86)\Google\Google Apps Password Sync"" /B /S", _
+             "instx86"
+  RunCommand "dir ""\\" & CompName & "\c$\Program Files (x86)\Google\G Suite Password Sync"" /B /S", _
              "instx86"
 
   PrintLine "Getting system-wide proxy settings dump from registry - proxy.txt"
@@ -377,6 +422,12 @@ Sub RunDiagnostics(CompName)
   PrintLine "Getting system-wide WinHTTP settings dump from registry - winhttp.txt"
   RunCommand "reg query ""\\" & CompName & "\HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\Connections"" /v WinHttpSettings", _
              "winhttp"
+
+  PrintLine "Getting admin email address and service account address (if applicable)"
+  RunCommand "reg query ""\\" & CompName & "\HKLM\SOFTWARE\Google\Google Apps Password Sync"" /v Email", _
+             "admin-and-serviceaccount-emails"
+  RunCommand "reg query ""\\" & CompName & "\HKLM\SOFTWARE\Google\Google Apps Password Sync"" /v ServiceAccountEmail", _
+             "admin-and-serviceaccount-emails"
 
   PrintLine "Getting system-wide WinHTTP settings dump from registry, and decoding - winhttp_decoded.txt"
   DecodeWinHTTPSettings CompName, "winhttp_decoded.txt"
@@ -417,12 +468,13 @@ Function GetWritableDCs()
   conn.Open "ADs Provider"
   LogErrorIfNeeded "Error opening ADSI ADO provider"
 
+  QueryBase = "<LDAP://" & _
+              GetObject("LDAP://RootDSE").Get("defaultNamingContext") & ">;"
   ' Query for computer accounts where userAccountControl has
   ' SERVER_TRUST_ACCOUNT bit set, meaning it's a DC, and not msDS-IsRodc=true,
   ' meaning it isn't an RODC. See http://support.microsoft.com/kb/305144 for
   ' reference.
-  Query = "<LDAP://" & _
-          GetObject("LDAP://RootDSE").Get("defaultNamingContext") & ">;" & _
+  Query = QueryBase & _
           "(&(objectCategory=computer)" & _
           "(userAccountControl:1.2.840.113556.1.4.803:=8192)" & _
           "(!(msDS-IsRodc=true)));" & _
@@ -435,8 +487,7 @@ Function GetWritableDCs()
   If rs.EOF Then
     LogStr "W:No DCs found - maybe msDS-IsRodc is missing from the schema " & _
            "(Windows 2003)? Trying without it."
-    Query = "<LDAP://" & _
-            GetObject("LDAP://RootDSE").Get("defaultNamingContext") & ">;" & _
+    Query = QueryBase & _
             "(&(objectCategory=computer)" & _
             "(userAccountControl:1.2.840.113556.1.4.803:=8192));" & _
             "dNSHostName;subtree"
@@ -508,7 +559,7 @@ Function CheckComputerAndUserDetails()
       LogStr "E:The user's domain doesn't match the machine's domain. Exiting."
       ErrorMsgBox "The current user's DNS domain (" & UserDNSDomain & _
                   ") doesn't match the machine's DNS domain (" & _
-                  objItem.Domain & "). This will cause Google Apps " & _
+                  objItem.Domain & "). This will cause G Suite " & _
                   "Password Sync to fail. Make sure you are logged in as a " & _
                   "domain admin from the same domain as the Domain " & _
                   "Controller, and try the installation again."
@@ -604,7 +655,7 @@ Function CheckIfRunningAsDomainAdmin()
   Else
     LogStr "E:The current user is *not* a member of Domain Admins"
     ErrorMsgBox "The current user isn't a member of the Domain Admins " & _
-                "group. To successfully install and setup Google Apps " & _
+                "group. To successfully install and setup G Suite " & _
                 "Password Sync, you must be a Domain Admin." & _
                 vbNewLine & vbNewLine & _
                 "Please contact a Domain Admin to continue. You can try " & _
