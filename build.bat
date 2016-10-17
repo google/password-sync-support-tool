@@ -23,13 +23,13 @@ pushd "%~dp0"
 rem Create a build directory, ignore errors.
 mkdir build 2>nul
 rem Find the version number by searching for the version set in the VBS file.
-for /f "tokens=4" %%a IN ('findstr /R /B /C:"Const Ver = \"[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*\"" gapstool.vbs') DO set ver=%%a
+for /f "tokens=4" %%a IN ('findstr /R /B /C:"Const Ver = \"[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*\"" gspstool.vbs') DO set ver=%%a
 rem Strip the double quotes (") from the version number.
 set ver=%ver:"=%
 echo Going to build GSPSTool version %ver%...
 
 rem Generate the build commandline.
-set buildcmd=..\..\tools\autoit\Aut2Exe\Aut2Exe.exe /in gapstool.au3 /icon pictographs-fire_extinguisher_inv.ico /comp 4 /pack /gui /execlevel requireadministrator /companyname Google /productname "GSPS support tool" /fileversion %ver% /productversion %ver%
+set buildcmd=..\..\tools\autoit\Aut2Exe\Aut2Exe.exe /in gspstool.au3 /icon pictographs-fire_extinguisher_inv.ico /comp 4 /pack /gui /execlevel requireadministrator /companyname Google /productname "GSPS support tool" /fileversion %ver% /productversion %ver%
 
 echo Build command base: %buildcmd%
 

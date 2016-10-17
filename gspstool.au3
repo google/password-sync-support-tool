@@ -18,5 +18,5 @@
 ; Icon is Public Domain: pictographs-fire_extinguisher_inv.ico from
 ; http://openiconlibrary.sourceforge.net/
 
-FileInstall("GAPSTool.vbs", @TempDir & "\GAPSTool.vbs", 1)
-Run("WScript " & @TempDir & "\GAPSTool.vbs")
+FileInstall("GSPSTool.vbs", @TempDir & "\GSPSTool.vbs", 1)
+Run("WScript " & @TempDir & "\GSPSTool.vbs")
