@@ -16,7 +16,7 @@
 ' Liron Newman lironn@google.com
 
 ' Do not change this line's format, build.bat relies on it.
-Const Ver = "2.0.0.0"
+Const Ver = "2.0.1.0"
 
 Dim fso, objShell, CurrentComputerName
 Set fso = WScript.CreateObject("Scripting.FileSystemObject")
@@ -347,20 +347,12 @@ Sub RunDiagnostics(CompName)
   ' It doesn't matter for the other paths (they don't depend on the username).
   PrintLine "Copying logs and XML - copying.txt"
 
-  ' C:\Users\username\AppData\Local\Google\Google Apps Password Sync\Tracing\GoogleAppsPasswordSync
-  RunCopyCommand "\\" & CompName & "\c$\Users\%username%\AppData\Local\Google\Google Apps Password Sync\Tracing\GoogleAppsPasswordSync", _
+  ' C:\Users\username\AppData\Local\Google\Google Apps Password Sync\Tracing
+  RunCopyCommand "\\" & CompName & "\c$\Users\%username%\AppData\Local\Google\Google Apps Password Sync\Tracing", _
                  "UI"
 
-  ' C:\Documents and Settings\username\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\GoogleAppsPasswordSync
-  RunCopyCommand "\\" & CompName & "\c$\Documents and Settings\%username%\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\GoogleAppsPasswordSync", _
-                 "UI"
-
-  ' C:\Users\username\AppData\Local\Google\Google Apps Password Sync\Tracing\PasswordSync
-  RunCopyCommand "\\" & CompName & "\c$\Users\%username%\AppData\Local\Google\Google Apps Password Sync\Tracing\PasswordSync", _
-                 "UI"
-
-  ' C:\Documents and Settings\username\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\PasswordSync
-  RunCopyCommand "\\" & CompName & "\c$\Documents and Settings\%username%\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing\PasswordSync", _
+  ' C:\Documents and Settings\username\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing
+  RunCopyCommand "\\" & CompName & "\c$\Documents and Settings\%username%\Local Settings\Application Data\Google\Google Apps Password Sync\Tracing", _
                  "UI"
 
   ' C:\Users\username\AppData\Local\Google\Identity
