@@ -16,7 +16,7 @@
 ' Liron Newman lironn@google.com
 
 ' Do not change this line's format, build.bat relies on it.
-Const Ver = "2.0.1.0"
+Const Ver = "2.0.2.0"
 
 Dim fso, objShell, CurrentComputerName
 Set fso = WScript.CreateObject("Scripting.FileSystemObject")
@@ -41,7 +41,7 @@ CurrentComputerName = _
     UCase(objShell.ExpandEnvironmentStrings("%computername%.%userdnsdomain%"))
 LogFileName = TempDir & "\GSPSTool.log"
 ' Check if this instance was executed to diagnose a DC
-If WScript.Arguments.Count > 1 Then
+If WScript.Arguments.Count > 0 Then
   ' Note that this will break commandline arguments if we plan to use them in
   ' the future
   If UCase(WScript.Arguments(0)) = "/DC" Then
@@ -77,32 +77,36 @@ ReDim arrBuffers(UBound(arrWritableDCs))
 Dim arrOutFiles()  ' For StdOut buffers
 ReDim arrOutFiles(UBound(arrWritableDCs))
 For i = 0 To UBound(arrWritableDCs)
-  ' Create folder for results
-  LogStr "A:Creating " & TempDir & "\" & arrWritableDCs(i)
-  fso.CreateFolder TempDir & "\" & arrWritableDCs(i)
-  LogErrorIfNeeded "Error creating folder"
-  ' Call this script with DC name
-  LogStr "A:Starting job for " & arrWritableDCs(i)
-  ' We need to redirect both stdout and stderr to a file instead of catching
-  ' them directly with the StdOut/StdEr objects, because reading from these
-  ' streams is blocking, and we want to do it concurrently.
-  Set arrExec(i) = objShell.Exec("cmd /c cscript //NoLogo """ & _
-                                 WScript.ScriptFullName & _
-                                 """ /DC " & _
-                                 arrWritableDCs(i) & _
-                                 " 1>" & _
-                                 TempDir & _
-                                 "\" & _
-                                 arrWritableDCs(i) & _
-                                 ".txt 2>&1 ")
-  LogErrorIfNeeded "Error starting job"
-  WScript.Sleep 100
-  ' Open the output file.
-  Set arrOutFiles(i) = _
-      fso.OpenTextFile(TempDir & "\" & arrWritableDCs(i) & ".txt", _
-                       ForReading, _
-                       0)
-  LogErrorIfNeeded "Error opening job output file"
+  If arrWritableDCs(i) <> "" Then
+    ' Create folder for results
+    LogStr "A:Creating " & TempDir & "\" & arrWritableDCs(i)
+    fso.CreateFolder TempDir & "\" & arrWritableDCs(i)
+    LogErrorIfNeeded "Error creating folder"
+    ' Call this script with DC name
+    LogStr "A:Starting job for " & arrWritableDCs(i)
+    ' We need to redirect both stdout and stderr to a file instead of catching
+    ' them directly with the StdOut/StdEr objects, because reading from these
+    ' streams is blocking, and we want to do it concurrently.
+    Set arrExec(i) = objShell.Exec("cmd /c cscript //NoLogo """ & _
+                                    WScript.ScriptFullName & _
+                                    """ /DC " & _
+                                    arrWritableDCs(i) & _
+                                    " 1>" & _
+                                    TempDir & _
+                                    "\" & _
+                                    arrWritableDCs(i) & _
+                                    ".txt 2>&1 ")
+    LogErrorIfNeeded "Error starting job"
+    WScript.Sleep 100
+    ' Open the output file.
+    Set arrOutFiles(i) = _
+        fso.OpenTextFile(TempDir & "\" & arrWritableDCs(i) & ".txt", _
+                        ForReading, _
+                        0)
+    LogErrorIfNeeded "Error opening job output file"
+  Else
+    LogStr "W:Skipping empty DC name"
+  End If
 Next
 
 ' Process output from all instances until they're all gone
@@ -293,7 +297,7 @@ Sub DecodeWinHTTPSettings(CompName, OutputFileName)
       WinHTTPProxy = WinHTTPProxy & ChrW(WinHTTPSettingsArray(Index))
     Next
     ' Get the bypass list string length. We know its position is 12 + 1 + 3 +
-    ' the length of the proxy string. 
+    ' the length of the proxy string.
     WinHTTPBypassListLength = WinHTTPSettingsArray((16 + WinHTTPProxyLength))
     ' If the length of the list is greater than 0, concatenate it.
     If WinHTTPBypassListLength > 0 Then
@@ -424,30 +428,63 @@ Sub RunDiagnostics(CompName)
   PrintLine "Getting system-wide WinHTTP settings dump from registry, and decoding - winhttp_decoded.txt"
   DecodeWinHTTPSettings CompName, "winhttp_decoded.txt"
 
-  ' Get remote system time using http://blogs.technet.com/b/heyscriptingguy/archive/2007/03/08/how-can-i-verify-the-system-time-on-a-remote-computer.aspx
-  PrintLine "Getting local time on remote machine"
+  ' Get remote system time using http://blogs.technet.com/b/heyscriptingguy/archive/2007/03/08/how-can-i-verify-the-system-time-on-a-remote-computer.aspx,
+  ' and last boot time using https://gallery.technet.microsoft.com/ScriptCenter/82588289-4e07-455e-8322-c635cc719f00/
+  PrintLine "Getting local time and last boot time from remote machine"
   Set objWMIService = GetObject("winmgmts:\\" & CompName & "\root\cimv2")
   PrintErrorIfNeeded "Error opening WMI on " & CompName & ": "
 
-  Set colItems = objWMIService.ExecQuery("Select * From Win32_OperatingSystem")
+  Set colItems = objWMIService.ExecQuery("SELECT * FROM Win32_OperatingSystem")
   PrintErrorIfNeeded "Error querying Win32_OperatingSystem. "
 
   For Each objItem in colItems
-    strDate = objItem.LocalDateTime
-    WScript.Echo "Local Time: " & _
-                 Left(strDate, 4) & "-" & _
-                 Mid(strDate, 7, 2) & "-" & _
-                 Mid(strDate, 5, 2) & " " & _
-                 Mid (strDate, 9, 2) & ":" & _
-                 Mid(strDate, 11, 2) & ":" & _
-                 Mid(strDate, 13, 2) & _
-                 ", Time Zone: " & (objItem.CurrentTimeZone / 60)
+    strTimeZone = (objItem.CurrentTimeZone / 60)
+    If objItem.CurrentTimeZone >= 0 Then
+      strTimeZone = "+" & strTimeZone
+    End If
+    WScript.Echo "Local Time: " & WMIDateStringToTime(objItem.LocalDateTime) & _
+                 ", Time Zone: " & strTimeZone
+    WScript.Echo "Last boot time: " & _
+                 WMIDateStringToTime(objItem.LastBootUpTime)
   Next
-  PrintErrorIfNeeded "Error converting time: "
+  PrintErrorIfNeeded "Error printing time: "
   Err.Clear
+
+  ' Get file versions using https://blogs.technet.microsoft.com/heyscriptingguy/2005/04/18/how-can-i-determine-the-version-number-of-a-file/
+  PrintLine "Getting versions of important executables"
+  Set colFiles = objWMIService.ExecQuery( _
+      "SELECT Name, Version FROM CIM_Datafile WHERE " & _
+      "Name = 'c:\\Windows\\System32\\lsass.exe' OR " & _
+      "Name = 'c:\\Windows\\System32\\password_sync_dll.dll' OR " & _
+      "Name = 'c:\\Program Files\\Google\\Google Apps Password Sync\\GoogleAppsPasswordSync.exe' OR " & _
+      "Name = 'c:\\Program Files\\Google\\Google Apps Password Sync\\password_sync_service.exe' OR " & _
+      "Name = 'c:\\Program Files\\Google\\Google Apps Password Sync\\unifiedlogin.dll' OR " & _
+      "Name = 'c:\\Program Files\\Google\\G Suite Password Sync\\PasswordSync.exe' OR " & _
+      "Name = 'c:\\Program Files\\Google\\G Suite Password Sync\\password_sync_service.exe' OR " & _
+      "Name = 'c:\\Program Files\\Google\\G Suite Password Sync\\unifiedlogin.dll'")
+  PrintErrorIfNeeded "Error querying CIM_Datafile. "
+  For Each objFile in colFiles
+    Wscript.Echo "[" & objFile.Name & "] " & objFile.Version
+  Next
+  PrintErrorIfNeeded "Error printing files and versions: "
 
   PrintLine "Finished diagnostics on " & CompName
 End Sub
+
+Function WMIDateStringToTime(strDate)
+  On Error Resume Next
+  If Len(strDate) < 15 Then
+    WMIDateStringToTime = "**Can't parse WMI time string " & strDate & "**"
+  Else
+    WMIDateStringToTime = Left(strDate, 4) & "-" & _
+                          Mid(strDate, 5, 2) & "-" & _
+                          Mid(strDate, 7, 2) & " " & _
+                          Mid (strDate, 9, 2) & ":" & _
+                          Mid(strDate, 11, 2) & ":" & _
+                          Mid(strDate, 13, 2)
+  End If
+  PrintErrorIfNeeded "Error converting WMI time: "
+End Function
 
 ' Returns array of writable DCs' DNS names
 Function GetWritableDCs()
@@ -629,7 +666,7 @@ Function CheckIfRunningAsDomainAdmin()
   Const DomainAdminsSIDStart = "010500000000000515000000"
   Const DomainAdminsSIDEnd = "00020000"
   ' Enumerate all member group names
-  tkUser = GetTokenGroups(userDN) ' Get tokens of member groups
+  tkUser = GetTokenGroups(userDN)  ' Get tokens of member groups
   ' See if the Domain Admins group SID is in the token groups
   CheckIfRunningAsDomainAdmin = False
   For Each sid In tkUser
