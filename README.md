@@ -1,6 +1,6 @@
-##1. [Download the GSPS Support Tool](https://github.com/google/gsps-support-tool/releases/download/2.0.2/gspstool.exe)
+## 1. [Download the GSPS Support Tool](https://github.com/google/gsps-support-tool/releases/download/2.0.2/gspstool.exe)
 
-###2. Upload the file it creates to the [log analyzer](https://toolbox.googleapps.com/apps/loganalyzer/?productid=gaps)
+### 2. Upload the file it creates to the [log analyzer](https://toolbox.googleapps.com/apps/loganalyzer/?productid=gaps)
 
 Learn more about [troubleshooting GSPS](https://support.google.com/a/answer/2622457), and about [GSPS logs and error codes](https://support.google.com/a/answer/3296820).
 
