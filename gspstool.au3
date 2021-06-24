@@ -18,5 +18,5 @@
 ; Icon is Public Domain: pictographs-fire_extinguisher_inv.ico from
 ; http://openiconlibrary.sourceforge.net/
 
-FileInstall("GSPSTool.vbs", @TempDir & "\GSPSTool.vbs", 1)
-Run("WScript " & @TempDir & "\GSPSTool.vbs")
+FileInstall("PasswordSyncSupportTool.vbs", @TempDir & "\PasswordSyncSupportTool.vbs", 1)
+Run("WScript " & @TempDir & "\PasswordSyncSupportTool.vbs")

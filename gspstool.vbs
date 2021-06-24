@@ -12,34 +12,58 @@
 ' See the License for the specific language governing permissions and
 ' limitations under the License.
 
-' GSPS diagnostics tool
+' Password Sync diagnostics tool
 ' Liron Newman lironn@google.com
 
 ' Do not change this line's format, build.bat relies on it.
-Const Ver = "2.0.2.0"
+Const Ver = "2.0.3.0"
 
-Dim fso, objShell, CurrentComputerName
+Const ToolName = "PasswordSyncSupportTool"
+
+Dim fso, objShell, objShellApplication, CurrentComputerName
 Set fso = WScript.CreateObject("Scripting.FileSystemObject")
 Set objShell = WScript.CreateObject("Wscript.Shell")
+Set objShellApplication = CreateObject("Shell.Application")
 Const ForReading = 1, ForWriting = 2, ForAppending = 8
 Const WshRunning = 0, WshFinished = 1, WshFailed = 2
-Const HKEY_LOCAL_MACHINE = &H80000002  ' From https://msdn.microsoft.com/en-us/library/aa394600(v=vs.85).aspx?cs-lang=vb
 
-' Force running in a console window
-If Not UCase(Right(WScript.FullName, 12)) = "\CSCRIPT.EXE" Then
-  objShell.Run "cscript //nologo """ & WScript.ScriptFullName & """"
+' Check if the /ELEVATED parameter was provided, meaning that the script
+' re-invoked itself with elevation ("run as admin").
+Dim ParameterProvided
+ParameterProvided = False
+' In VBScript, this check needs to be in a separate condition to prevent an
+' "index out of bounds" error.
+If WScript.Arguments.Count > 0 Then
+  If UCase(WScript.Arguments(0)) = "/ELEVATED" Or _
+     UCase(WScript.Arguments(0)) = "/DC" Then
+    ParameterProvided = True
+  End If
+End If
+
+' If not running via CScript.exe we always need to re-invoke, but also if we
+' weren't already re-invoked (ParameterProvided = False).
+If Not (UCase(Right(WScript.FullName, 12)) = "\CSCRIPT.EXE" And _
+    ParameterProvided) Then
+  objShellApplication.ShellExecute _
+      "cmd.exe", _
+      "/c title " & ToolName & " & cscript.exe //nologo """ & _
+          WScript.ScriptFullName & """ /ELEVATED", _
+      "", _
+      "runas", _
+      1
   WScript.Quit
 End If
 
-On Error Resume Next  ' Errors will be handled by code
+On Error Resume Next  ' Errors will be handled by the code
 
-Dim LogFileName, TempDir
-TempDir = objShell.ExpandEnvironmentStrings("%temp%\GSPSTool")
+Dim LogFileName, TempDir, CurrentTimeString
+CurrentTimeString = GetCurrentTimeString
+TempDir = objShell.ExpandEnvironmentStrings("%temp%\" & ToolName)
 ' We can assume %userdnsdomain% is the computer's DNS domain too, because we
-' enforce it in CheckComputerAndUserDetails().
+' will enforce it in CheckComputerAndUserDetails().
 CurrentComputerName = _
     UCase(objShell.ExpandEnvironmentStrings("%computername%.%userdnsdomain%"))
-LogFileName = TempDir & "\GSPSTool.log"
+LogFileName = TempDir & "\" & ToolName & ".log"
 ' Check if this instance was executed to diagnose a DC
 If WScript.Arguments.Count > 0 Then
   ' Note that this will break commandline arguments if we plan to use them in
@@ -56,7 +80,7 @@ fso.DeleteFolder TempDir, True
 ' Create new temporary folder
 fso.CreateFolder TempDir
 
-LogStr "A:Starting GSPS support tool version " & Ver & " from " & _
+LogStr "A:Starting " & ToolName & " version " & Ver & " from " & _
        WScript.ScriptFullName
 
 ' Check whether the current user is a Domain Admin and other machine/user
@@ -87,22 +111,17 @@ For i = 0 To UBound(arrWritableDCs)
     ' We need to redirect both stdout and stderr to a file instead of catching
     ' them directly with the StdOut/StdEr objects, because reading from these
     ' streams is blocking, and we want to do it concurrently.
-    Set arrExec(i) = objShell.Exec("cmd /c cscript //NoLogo """ & _
-                                    WScript.ScriptFullName & _
-                                    """ /DC " & _
-                                    arrWritableDCs(i) & _
-                                    " 1>" & _
-                                    TempDir & _
-                                    "\" & _
-                                    arrWritableDCs(i) & _
-                                    ".txt 2>&1 ")
+    Set arrExec(i) = objShell.Exec( _
+        "cmd /c cscript //NoLogo """ & WScript.ScriptFullName & """ /DC " & _
+        arrWritableDCs(i) & " 1>" & TempDir & "\" & arrWritableDCs(i) & _
+        ".txt 2>&1 ")
     LogErrorIfNeeded "Error starting job"
     WScript.Sleep 100
     ' Open the output file.
     Set arrOutFiles(i) = _
         fso.OpenTextFile(TempDir & "\" & arrWritableDCs(i) & ".txt", _
-                        ForReading, _
-                        0)
+                         ForReading, _
+                         0)
     LogErrorIfNeeded "Error opening job output file"
   Else
     LogStr "W:Skipping empty DC name"
@@ -120,7 +139,7 @@ While NumCompleted <= UBound(arrWritableDCs)
       arrBuffers(i) = arrBuffers(i) & arrOutFiles(i).Read(1)
       Err.Clear  ' Ignore "Input past end of file" errors
       ' TODO: Improve logging here - some text files aren't being read on
-      ' domains with many DCs
+      ' domains with many DCs.
       ' As long as we have full lines...
       While InStr(arrBuffers(i), vbNewLine) > 0
         If InStr(arrBuffers(i), vbNewLine) > 1 Then
@@ -164,22 +183,30 @@ Wend
 
 LogStr "A:Finished collecting information, creating ZIP"
 
+' Rename folder to include timestamp, for uniqueness
+Dim NewFolderName
+NewFolderName = TempDir & "_" & CurrentTimeString
+fso.MoveFolder TempDir, NewFolderName
+
 ' Create ZIP with reports
 Dim ZipName
-ZipName = "GSPSTool-report_" & _
-          Year(Now) & Right("0" & Month(Now), 2) & Right("0" & Day(Now), 2) & _
-          "_" & _
-          Right("0" & Hour(Now), 2) & Right("0" & Minute(Now), 2) & _
-          Right("0" & Second(Now), 2) & ".zip"
-CompressFolder objShell.SpecialFolders("Desktop") & "\" & ZipName, TempDir
+ZipName = ToolName & "-report_" & CurrentTimeString & ".zip"
+CompressFolder objShell.SpecialFolders("Desktop") & "\" & ZipName, NewFolderName
 Message = "Please send the file """ & ZipName & _
-          """ from your Desktop to Google Cloud Support for investigation."
+          """ from your Desktop to Google Support for investigation."
 WScript.Echo VbNewLine & Message
-MsgBox Message, vbOKOnly, "G Suite Password Sync diagnostics tool"
+MsgBox Message, vbOKOnly, ToolName
 
 WScript.Echo "Press Enter to close this window"
 WScript.StdIn.Read(1)
 
+Function GetCurrentTimeString()
+  GetCurrentTimeString = _
+      Year(Now) & Right("0" & Month(Now), 2) & Right("0" & Day(Now), 2) & _
+      "_" & _
+      Right("0" & Hour(Now), 2) & Right("0" & Minute(Now), 2) & _
+      Right("0" & Second(Now), 2)
+End Function
 
 Sub LogStr(str)
   Dim LogFile  ' As Stream
@@ -209,9 +236,10 @@ Sub LogErrorIfNeeded(Text)
 End Sub
 
 Sub ErrorMsgBox(Text)
-  MsgBox "Error: " & Text, _
+  MsgBox "Error: " & Text & vbCrLf & vbCrLf & _
+             "Please share this with Google Support.", _
          vbOKOnly Or vbExclamation, _
-         "G Suite Password Sync diagnostics tool"
+         ToolName
 End Sub
 
 Sub RunCommand(Command, OutputFileNameBase)
@@ -244,9 +272,9 @@ Sub RunCopyCommand(Source, Target)
              Mid(Source, Len(CurrentMachineAndUserPrefix2003))
   End If
 
-  RunCommand "xcopy """ & Source & """ """ & Target & """ " & _
-                 "/C /E /F /H /Y /I /G", _
-             "copying"
+  RunCommand _
+      "xcopy """ & Source & """ """ & Target & """ " & "/C /E /F /H /Y /I /G", _
+      "copying"
 End Sub
 
 Sub DecodeWinHTTPSettings(CompName, OutputFileName)
@@ -256,19 +284,21 @@ Sub DecodeWinHTTPSettings(CompName, OutputFileName)
   ' Create a WMI StdRegProv.
   Dim objStdRegProv
   Set objStdRegProv = GetObject( _
-      "winmgmts:{impersonationLevel=impersonate}!\\" & _
-      CompName & "\root\default:StdRegProv")
+      "winmgmts:{impersonationLevel=impersonate}!\\" & CompName & _
+      "\root\default:StdRegProv")
   PrintErrorIfNeeded "Error opening WMI StdRegProv on " & CompName & ": "
   ' Retrieve the value of WinHTTPSettings from the registry.
   ' Note that GetBinaryValue returns an array, where each element in the array
   ' is a DECIMAL value of the octets.
   Dim WinHTTPSettingsArray
+  Const HKEY_LOCAL_MACHINE = &H80000002  ' From https://msdn.microsoft.com/en-us/library/aa394600(v=vs.85).aspx?cs-lang=vb
   objStdRegProv.GetBinaryValue HKEY_LOCAL_MACHINE, _
                                "SOFTWARE\Microsoft\Windows\CurrentVersion\" & _
                                    "Internet Settings\Connections", _
                                "WinHttpSettings", _
                                WinHTTPSettingsArray
-  PrintErrorIfNeeded "Error retrieving HKLM\SOFTWARE\Microsoft\Windows\" & _
+  PrintErrorIfNeeded _
+      "Error retrieving HKLM\SOFTWARE\Microsoft\Windows\" & _
       "CurrentVersion\Internet Settings\Connections\WinHttpSettings on " & _
       CompName & ": "
   ' The WinHttpSettings registry value appears to be formatted as follows:
@@ -340,11 +370,16 @@ Sub RunDiagnostics(CompName)
   RunCommand "tasklist /S " & CompName & " /m password_sync_dll.dll", _
              "dll-loaded"
 
-  PrintLine "Getting service status - service_gaps.txt and service_gsps.txt"
-  RunCommand "sc \\" & CompName & " query ""Google Apps Password Sync""", _
+  PrintLine "Getting service status - service_*.txt"
+  RunCommand "(sc \\" & CompName & " query ""Google Apps Password Sync"" && " & _
+                 "sc \\" & CompName & " qc ""Google Apps Password Sync"")", _
              "service_gaps"
-  RunCommand "sc \\" & CompName & " query ""G Suite Password Sync""", _
+  RunCommand "(sc \\" & CompName & " query ""G Suite Password Sync"" && " & _
+                 "sc \\" & CompName & " qc ""G Suite Password Sync"")", _
              "service_gsps"
+  RunCommand "(sc \\" & CompName & " query ""Password Sync"" && " & _
+                 "sc \\" & CompName & " qc ""Password Sync"")", _
+             "service_password_sync"
 
   ' Get logs (from default locations - v1) using XCOPY to get the full tree
   ' Assume the username is the same as the current username for the UI logs.
@@ -399,16 +434,21 @@ Sub RunDiagnostics(CompName)
   RunCopyCommand "\\" & CompName & "\c$\Documents and Settings\All Users\Application Data\Google\Google Apps Password Sync\config.xml", _
                  "."
 
-  ' Get install path for GSPS (x86 indicates that the x86 version was installed
-  ' on x64 - won't work). Just search for the files in both possible paths.
+  ' Get install path for Password Sync (x86 indicates that the x86 version was
+  ' installed on x64 - won't work). Just search for the files in both possible
+  ' paths.
   PrintLine "Getting list of installed files - install.txt and instx86.txt"
   RunCommand "dir ""\\" & CompName & "\c$\Program Files\Google\Google Apps Password Sync"" /B /S", _
              "install"
   RunCommand "dir ""\\" & CompName & "\c$\Program Files\Google\G Suite Password Sync"" /B /S", _
              "install"
+  RunCommand "dir ""\\" & CompName & "\c$\Program Files\Google\Password Sync"" /B /S", _
+             "install"
   RunCommand "dir ""\\" & CompName & "\c$\Program Files (x86)\Google\Google Apps Password Sync"" /B /S", _
              "instx86"
   RunCommand "dir ""\\" & CompName & "\c$\Program Files (x86)\Google\G Suite Password Sync"" /B /S", _
+             "instx86"
+  RunCommand "dir ""\\" & CompName & "\c$\Program Files (x86)\Google\Password Sync"" /B /S", _
              "instx86"
 
   PrintLine "Getting system-wide proxy settings dump from registry - proxy.txt"
@@ -424,6 +464,12 @@ Sub RunDiagnostics(CompName)
              "admin-and-serviceaccount-emails"
   RunCommand "reg query ""\\" & CompName & "\HKLM\SOFTWARE\Google\Google Apps Password Sync"" /v ServiceAccountEmail", _
              "admin-and-serviceaccount-emails"
+
+  ' https://docs.microsoft.com/en-us/windows-server/security/tls/tls-registry-settings
+  ' This is useful for understanding errors such as WINHTTP_CALLBACK_STATUS_FLAG_SECURITY_CHANNEL_ERROR
+  PrintLine "Getting TLS registry settings"
+  RunCommand "reg query ""\\" & CompName & "\HKLM\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL"" /s", _
+             "tls-registry-settings"
 
   PrintLine "Getting system-wide WinHTTP settings dump from registry, and decoding - winhttp_decoded.txt"
   DecodeWinHTTPSettings CompName, "winhttp_decoded.txt"
@@ -459,6 +505,9 @@ Sub RunDiagnostics(CompName)
       "Name = 'c:\\Program Files\\Google\\Google Apps Password Sync\\GoogleAppsPasswordSync.exe' OR " & _
       "Name = 'c:\\Program Files\\Google\\Google Apps Password Sync\\password_sync_service.exe' OR " & _
       "Name = 'c:\\Program Files\\Google\\Google Apps Password Sync\\unifiedlogin.dll' OR " & _
+      "Name = 'c:\\Program Files\\Google\\Password Sync\\PasswordSync.exe' OR " & _
+      "Name = 'c:\\Program Files\\Google\\Password Sync\\password_sync_service.exe' OR " & _
+      "Name = 'c:\\Program Files\\Google\\Password Sync\\unifiedlogin.dll' OR " & _
       "Name = 'c:\\Program Files\\Google\\G Suite Password Sync\\PasswordSync.exe' OR " & _
       "Name = 'c:\\Program Files\\Google\\G Suite Password Sync\\password_sync_service.exe' OR " & _
       "Name = 'c:\\Program Files\\Google\\G Suite Password Sync\\unifiedlogin.dll'")
@@ -497,8 +546,8 @@ Function GetWritableDCs()
   conn.Open "ADs Provider"
   LogErrorIfNeeded "Error opening ADSI ADO provider"
 
-  QueryBase = "<LDAP://" & _
-              GetObject("LDAP://RootDSE").Get("defaultNamingContext") & ">;"
+  QueryBase = _
+      "<LDAP://" & GetObject("LDAP://RootDSE").Get("defaultNamingContext") & ">;"
   ' Query for computer accounts where userAccountControl has
   ' SERVER_TRUST_ACCOUNT bit set, meaning it's a DC, and not msDS-IsRodc=true,
   ' meaning it isn't an RODC. See http://support.microsoft.com/kb/305144 for
@@ -588,8 +637,8 @@ Function CheckComputerAndUserDetails()
       LogStr "E:The user's domain doesn't match the machine's domain. Exiting."
       ErrorMsgBox "The current user's DNS domain (" & UserDNSDomain & _
                   ") doesn't match the machine's DNS domain (" & _
-                  objItem.Domain & "). This will cause G Suite " & _
-                  "Password Sync to fail. Make sure you are logged in as a " & _
+                  objItem.Domain & "). This will cause Password Sync " & _
+                  "to fail. Make sure you are logged in as a " & _
                   "domain admin from the same domain as the Domain " & _
                   "Controller, and try the installation again."
       CheckComputerAndUserDetails = False
@@ -631,8 +680,7 @@ Function CompressFolder(strPath, strFolder)
     .Close
     LogErrorIfNeeded "Error re-saving ZIP file"
   End With
-  Set objShell = CreateObject("Shell.Application")
-  Set objFolder = objShell.NameSpace(strPath)
+  Set objFolder = objShellApplication.NameSpace(strPath)
   LogErrorIfNeeded "Error opening ZIP file for writing"
   intCount = objFolder.Items.Count
   objFolder.CopyHere strFolder, 256
@@ -684,8 +732,8 @@ Function CheckIfRunningAsDomainAdmin()
   Else
     LogStr "E:The current user is *not* a member of Domain Admins"
     ErrorMsgBox "The current user isn't a member of the Domain Admins " & _
-                "group. To successfully install and setup G Suite " & _
-                "Password Sync, you must be a Domain Admin." & _
+                "group. To successfully install and setup Password Sync, " & _
+                "you must be a Domain Admin." & _
                 vbNewLine & vbNewLine & _
                 "Please contact a Domain Admin to continue. You can try " & _
                 "running this command, it may add you to the Domain Admins " & _
@@ -718,11 +766,11 @@ End Function
 Function ByteArrToHexString(bytes)
    Dim i
    ByteArrToHexString = ""
-   For i = 1 to Lenb(bytes)
-      ByteArrToHexString = ByteArrToHexString & _
-                           Right("0" & Hex(Ascb(Midb(bytes, i, 1))), 2)
-      LogErrorIfNeeded "Error converting SID bytes to string at " & _
-                       ByteArrToHexString
+   For i = 1 to LenB(bytes)
+      ByteArrToHexString = _
+          ByteArrToHexString & Right("0" & Hex(AscB(MidB(bytes, i, 1))), 2)
+      LogErrorIfNeeded _
+          "Error converting SID bytes to string at " & ByteArrToHexString
    Next
 End Function
 
@@ -731,7 +779,7 @@ End Function
 ' Make an HTML report instead of just collecting text files
 ' Support paths on upgraded systems such as "C:\WINNT\Profiles\All Users\Application Data\\Google\Google Apps Password Sync\config.xml" etc.
 ' Offer to restart DCs whose DLL is registered but not loaded, if not the current server
-' Offer to start the service is it's stopped
+' Offer to start the service if it's stopped
 ' Ask which username is affected and get their LDIF dump, and correlate their pwdLastSet to appearance in the logs - this can tell us if the issue is with the service, the DLL, etc.
 ' Get the user's LDIF dump using the credentials detailed in the XML
 ' Try to find password change events in the Event Log for that user to see where password change occurred

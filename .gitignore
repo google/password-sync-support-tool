@@ -4,3 +4,8 @@
 
 /build/gspstool.exe
 /build/gspstool_x64.exe
+/.vs/gsps-support-tool/v15/.suo
+/.vs/config/applicationhost.config
+/.vs/ProjectSettings.json
+/.vs/slnx.sqlite
+/.vs/VSWorkspaceState.json
