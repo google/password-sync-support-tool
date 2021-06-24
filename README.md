@@ -1,4 +1,4 @@
-## 1. [Download the Password Sync Support Tool](https://github.com/google/gsps-support-tool/releases/download/2.0.3/PasswordSyncSupportTool.vbs)
+## 1. [Download the Password Sync Support Tool](https://github.com/google/password-sync-support-tool/releases/download/2.0.3/PasswordSyncSupportTool.vbs)
 
 ### 2. Upload the file it creates to the [log analyzer](https://toolbox.googleapps.com/apps/loganalyzer/?productid=gaps)
 
