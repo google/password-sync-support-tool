@@ -9,3 +9,294 @@
 /.vs/ProjectSettings.json
 /.vs/slnx.sqlite
 /.vs/VSWorkspaceState.json
+password-sync-support-tool/.gitignoreGitHub Docs
+ไวยากรณ์การเขียนและการจัดรูปแบบพื้นฐาน
+ในบทความนี้
+หัวเรื่อง
+จัดแต่งทรงผมข้อความ
+ข้อความอ้างอิง
+รหัสอ้างอิง
+ลิงค์
+ลิงค์ส่วน
+ลิงค์ที่เกี่ยวข้อง
+รูปภาพ
+รายการ
+รายการงาน
+การกล่าวถึงบุคคลและทีมงาน
+อ้างอิงปัญหาและดึงคำขอ
+อ้างอิงแหล่งข้อมูลภายนอก
+กำลังอัปโหลดเนื้อหา
+ใช้อีโมจิ
+ย่อหน้า
+เชิงอรรถ
+ซ่อนเนื้อหาที่มีความคิดเห็น
+ละเว้นการจัดรูปแบบ Markdown
+ปิดการใช้งานการเรนเดอร์ Markdown
+อ่านเพิ่มเติม
+สร้างการจัดรูปแบบที่ซับซ้อนสำหรับร้อยแก้วและโค้ดของคุณบน GitHub ด้วยไวยากรณ์ที่เรียบง่าย
+
+หัวเรื่อง
+ในการสร้างหัวเรื่อง ให้เพิ่ม#สัญลักษณ์หนึ่งถึงหกตัวก่อนข้อความหัวข้อของคุณ จำนวนที่#คุณใช้จะเป็นตัวกำหนดขนาดของหัวข้อ
+
+# The largest heading
+## The second largest heading
+###### The smallest heading
+แสดงผลส่วนหัว H1, H2 และ H6
+
+จัดแต่งทรงผมข้อความ
+คุณสามารถระบุการเน้นด้วยข้อความตัวหนา ตัวเอียง หรือขีดทับในช่องความคิดเห็นและ.mdไฟล์
+
+สไตล์	ไวยากรณ์	แป้นพิมพ์ลัด	ตัวอย่าง	เอาท์พุต
+ตัวหนา	** ** หรือ __ __	คำสั่ง/การควบคุม + b	**This is bold text**	นี่คือตัวหนา
+ตัวเอียง	* * หรือ _ _     	คำสั่ง/ควบคุม + i	*This text is italicized*	ข้อความนี้เป็นตัวเอียง
+ขีดฆ่า	~~ ~~		~~This was mistaken text~~	นี่เป็นข้อความที่ผิดพลาด
+ตัวหนาและซ้อนตัวเอียง	** ** และ _ _		**This text is _extremely_ important**	ข้อความนี้สำคัญมาก
+ตัวหนาและตัวเอียงทั้งหมด	*** ***		***All this text is important***	ข้อความทั้งหมดนี้มีความสำคัญ
+ข้อความอ้างอิง
+คุณสามารถอ้างข้อความด้วย>.
+
+Text that is not a quote
+
+> Text that is a quote
+แสดงผลข้อความที่ยกมา
+
+เคล็ดลับ:rเมื่อดูการสนทนาคุณจะสามารถพูดข้อความในความคิดเห็นโดยไฮไลต์ข้อความที่พิมพ์แล้ว คุณสามารถพูดแสดงความคิดเห็นทั้งหมดโดยคลิกแล้วอ้างอิงข้อความตอบ สำหรับข้อมูลเพิ่มเติมเกี่ยวกับแป้นพิมพ์ลัด โปรดดูที่ " แป้นพิมพ์ลัด "
+
+รหัสอ้างอิง
+คุณสามารถเรียกรหัสหรือคำสั่งภายในประโยคด้วย backticks เดียว ข้อความภายใน backticks จะไม่ถูกจัดรูปแบบ คุณยังสามารถกดแป้นพิมพ์ลัดcommandหรือCtrl+ eเพื่อแทรกเครื่องหมายย้อนกลับสำหรับบล็อกโค้ดภายในบรรทัดของ Markdown
+
+Use `git status` to list all new or modified files that haven't yet been committed.
+บล็อกโค้ดแบบอินไลน์ที่แสดงผล
+
+ในการจัดรูปแบบโค้ดหรือข้อความลงในบล็อกที่แตกต่างกัน ให้ใช้ backtick สามอัน
+
+คำสั่ง Git พื้นฐานบางคำสั่งคือ:
+```
+สถานะ git
+git add
+git คอมมิท
+```
+บล็อกโค้ดที่แสดงผล
+
+สำหรับข้อมูลเพิ่มเติม โปรดดูที่ " การสร้างและไฮไลต์บล็อคโค้ด "
+
+ลิงค์
+คุณสามารถสร้างการเชื่อมโยงแบบอินไลน์โดยการเชื่อมโยงข้อความในวงเล็บตัด[ ]แล้วตัด URL ( )ในวงเล็บ คุณยังสามารถใช้แป้นพิมพ์ลัดcommand + kเพื่อสร้างลิงก์ได้ เมื่อคุณเลือกข้อความแล้ว คุณสามารถวาง URL จากคลิปบอร์ดของคุณเพื่อสร้างลิงก์จากการเลือกโดยอัตโนมัติ
+
+This site was built using [GitHub Pages](https://pages.github.com/).
+
+ลิงค์ที่แสดงผล
+
+เคล็ดลับ: GitHub จะสร้างลิงก์โดยอัตโนมัติเมื่อมีการเขียน URL ที่ถูกต้องในความคิดเห็น สำหรับข้อมูลเพิ่มเติม โปรดดูที่ " การอ้างอิงและ URL ที่เชื่อมโยงอัตโนมัติ "
+
+ลิงค์ส่วน
+คุณสามารถลิงก์โดยตรงไปยังส่วนในไฟล์ที่แสดงผลโดยวางเมาส์เหนือส่วนหัวของส่วนเพื่อแสดงลิงก์:
+
+ลิงค์ส่วนภายในไฟล์ README สำหรับที่เก็บ github/นักวิทยาศาสตร์
+
+ลิงค์ที่เกี่ยวข้อง
+คุณสามารถกำหนดลิงก์ที่เกี่ยวข้องและพาธรูปภาพในไฟล์ที่แสดงผลของคุณ เพื่อช่วยผู้อ่านนำทางไปยังไฟล์อื่นๆ ในที่เก็บของคุณ
+
+ลิงก์ที่เกี่ยวข้องคือลิงก์ที่สัมพันธ์กับไฟล์ปัจจุบัน ตัวอย่างเช่น หากคุณมีไฟล์ README ในรูทของที่เก็บของคุณ และคุณมีไฟล์อื่นในdocs/CONTRIBUTING.mdลิงก์ที่เกี่ยวข้องไปยังCONTRIBUTING.mdใน README ของคุณอาจมีลักษณะดังนี้:
+
+[Contribution guidelines for this project](docs/CONTRIBUTING.md)
+GitHub จะแปลงลิงค์ที่เกี่ยวข้องหรือเส้นทางรูปภาพของคุณโดยอัตโนมัติตามสาขาใดก็ตามที่คุณกำลังใช้งานอยู่ เพื่อให้ลิงก์หรือเส้นทางใช้งานได้เสมอ คุณสามารถใช้ตัวถูกดำเนินการลิงก์ที่เกี่ยวข้องทั้งหมดได้ เช่น./และ../.
+
+ลิงก์สัมพัทธ์จะง่ายกว่าสำหรับผู้ใช้ที่โคลนที่เก็บของคุณ ลิงก์แบบสัมบูรณ์อาจไม่ทำงานในโคลนของที่เก็บของคุณ - เราขอแนะนำให้ใช้ลิงก์ที่เกี่ยวข้องเพื่ออ้างถึงไฟล์อื่นๆ ภายในที่เก็บของคุณ
+
+รูปภาพ
+คุณสามารถแสดงภาพโดยการเพิ่ม!และการตัดข้อความ ALT [ ]ใน ()แล้วห่อเชื่อมโยงสำหรับภาพในวงเล็บ
+
+![This is an image](https://myoctocat.com/assets/images/base-octocat.svg)
+
+ภาพที่แสดงผล
+
+GitHub รองรับการฝังรูปภาพลงในปัญหา ดึงคำขอ การสนทนา ความคิดเห็น และ.mdไฟล์ คุณสามารถแสดงรูปภาพจากที่เก็บของคุณ เพิ่มลิงก์ไปยังรูปภาพออนไลน์ หรืออัปโหลดรูปภาพ สำหรับข้อมูลเพิ่มเติม โปรดดูที่ " การอัปโหลดเนื้อหา "
+
+เคล็ดลับ:เมื่อคุณต้องการแสดงรูปภาพที่อยู่ในที่เก็บของคุณ คุณควรใช้ลิงก์แบบสัมพัทธ์แทนลิงก์แบบสัมบูรณ์
+
+ต่อไปนี้คือตัวอย่างบางส่วนสำหรับการใช้ลิงก์ที่เกี่ยวข้องเพื่อแสดงรูปภาพ
+
+บริบท	ลิงค์ญาติ
+อยู่ใน.mdไฟล์สาขาเดียวกัน	/assets/images/electrocat.png
+ใน.mdไฟล์ที่สาขาอื่น	/../main/assets/images/electrocat.png
+ในปัญหา ดึงคำขอและความคิดเห็นของที่เก็บ	../blob/main/assets/images/electrocat.png
+ใน.mdไฟล์ในที่เก็บอื่น	/../../../../github/docs/blob/main/assets/images/electrocat.png
+ในปัญหา ดึงคำขอและความคิดเห็นของที่เก็บอื่น	../../../github/docs/blob/main/assets/images/electrocat.png?raw=true
+หมายเหตุ : ลิงก์ที่เกี่ยวข้องสองลิงก์สุดท้ายในตารางด้านบนจะใช้ได้กับรูปภาพในที่เก็บส่วนตัวก็ต่อเมื่อผู้ดูมีสิทธิ์อ่านในที่เก็บส่วนตัวซึ่งมีรูปภาพเหล่านี้เป็นอย่างน้อย
+
+สำหรับข้อมูลเพิ่มเติม โปรดดูที่ " ลิงก์ที่เกี่ยวข้อง "
+
+การระบุธีมที่จะแสดงรูปภาพ
+คุณสามารถระบุธีมที่จะแสดงรูปภาพได้โดยการต่อท้าย#gh-dark-mode-onlyหรือ#gh-light-mode-onlyต่อท้าย URL รูปภาพใน Markdown
+
+เราแยกความแตกต่างระหว่างโหมดสีอ่อนและสีเข้ม ดังนั้นจึงมีสองตัวเลือกให้เลือก คุณสามารถใช้ตัวเลือกเหล่านี้เพื่อแสดงภาพที่ปรับให้เหมาะกับพื้นหลังสีเข้มหรือสีอ่อน ซึ่งจะเป็นประโยชน์อย่างยิ่งสำหรับรูปภาพ PNG แบบโปร่งใส
+
+บริบท	URL
+ธีมมืด	![GitHub Light](https://github.com/github-light.png#gh-dark-mode-only)
+ธีมไฟ	![GitHub Dark](https://github.com/github-dark.png#gh-light-mode-only)
+รายการ
+You can make an unordered list by preceding one or more lines of text with - or *.
+
+- George Washington
+- John Adams
+- Thomas Jefferson
+แสดงรายการที่ไม่เรียงลำดับ
+
+To order your list, precede each line with a number.
+
+1. James Madison
+2. James Monroe
+3. John Quincy Adams
+แสดงผลรายการสั่งซื้อ
+
+Nested Lists
+You can create a nested list by indenting one or more list items below another item.
+
+To create a nested list using the web editor on GitHub or a text editor that uses a monospaced font, like Atom, you can align your list visually. Type space characters in front of your nested list item, until the list marker character (- or *) lies directly below the first character of the text in the item above it.
+
+1. First list item
+   - First nested list item
+     - Second nested list item
+รายการที่ซ้อนกันโดยเน้นการจัดตำแหน่ง
+
+รายการที่มีสองระดับของรายการที่ซ้อนกัน
+
+To create a nested list in the comment editor on GitHub, which doesn't use a monospaced font, you can look at the list item immediately above the nested list and count the number of characters that appear before the content of the item. Then type that number of space characters in front of the nested list item.
+
+In this example, you could add a nested list item under the list item 100. First list item by indenting the nested list item a minimum of five spaces, since there are five characters (100. ) before First list item.
+
+100. First list item
+     - First nested list item
+รายการที่มีรายการซ้อนกัน
+
+You can create multiple levels of nested lists using the same method. For example, because the first nested list item has seven characters (␣␣␣␣␣-␣) before the nested list content First nested list item, you would need to indent the second nested list item by seven spaces.
+
+100. First list item
+     - First nested list item
+       - Second nested list item
+รายการที่มีสองระดับของรายการที่ซ้อนกัน
+
+For more examples, see the GitHub Flavored Markdown Spec.
+
+Task lists
+To create a task list, preface list items with a regular space character followed by [ ]. To mark a task as complete, use [x].
+
+- [x] #739
+- [ ] https://github.com/octo-org/octo-repo/issues/740
+- [ ] Add delight to the experience when all tasks are complete :tada:
+รายการงานที่แสดงผล
+
+If a task list item description begins with a parenthesis, you'll need to escape it with \:
+
+- [ ] \(Optional) Open a followup issue
+
+For more information, see "About task lists."
+
+Mentioning people and teams
+You can mention a person or team on GitHub by typing @ plus their username or team name. This will trigger a notification and bring their attention to the conversation. People will also receive a notification if you edit a comment to mention their username or team name. For more information about notifications, see "About notifications."
+
+@github/support What do you think about these updates?
+
+แสดงผล @mention
+
+When you mention a parent team, members of its child teams also receive notifications, simplifying communication with multiple groups of people. For more information, see "About teams."
+
+Typing an @ symbol will bring up a list of people or teams on a project. The list filters as you type, so once you find the name of the person or team you are looking for, you can use the arrow keys to select it and press either tab or enter to complete the name. For teams, enter the @organization/team-name and all members of that team will get subscribed to the conversation.
+
+The autocomplete results are restricted to repository collaborators and any other participants on the thread.
+
+Referencing issues and pull requests
+You can bring up a list of suggested issues and pull requests within the repository by typing #. Type the issue or pull request number or title to filter the list, and then press either tab or enter to complete the highlighted result.
+
+For more information, see "Autolinked references and URLs."
+
+Referencing external resources
+If custom autolink references are configured for a repository, then references to external resources, like a JIRA issue or Zendesk ticket, convert into shortened links. To know which autolinks are available in your repository, contact someone with admin permissions to the repository. For more information, see "Configuring autolinks to reference external resources."
+
+Uploading assets
+You can upload assets like images by dragging and dropping, selecting from a file browser, or pasting. You can upload assets to issues, pull requests, comments, and .md files in your repository.
+
+Using emoji
+You can add emoji to your writing by typing :EMOJICODE:.
+
+@octocat :+1: This PR looks great - it's ready to merge! :shipit:
+
+แสดงอิโมจิ
+
+Typing : will bring up a list of suggested emoji. The list will filter as you type, so once you find the emoji you're looking for, press Tab or Enter to complete the highlighted result.
+
+For a full list of available emoji and codes, check out the Emoji-Cheat-Sheet.
+
+Paragraphs
+You can create a new paragraph by leaving a blank line between lines of text.
+
+Footnotes
+You can add footnotes to your content by using this bracket syntax:
+
+Here is a simple footnote[^1].
+
+A footnote can also have multiple lines[^2].  
+
+You can also use words, to fit your writing style more closely[^note].
+
+[^1]: My reference.
+[^2]: Every new line should be prefixed with 2 spaces.  
+  This allows you to have a footnote with multiple lines.
+[^note]:
+    Named footnotes will still render with numbers instead of the text but allow easier identification and linking.  
+    This footnote also has been made with a different syntax using 4 spaces for new lines.
+The footnote will render like this:
+
+เชิงอรรถที่แสดงผล
+
+Note: The position of a footnote in your Markdown does not influence where the footnote will be rendered. You can write a footnote right after your reference to the footnote, and the footnote will still render at the bottom of the Markdown.
+
+Hiding content with comments
+You can tell GitHub to hide content from the rendered Markdown by placing the content in an HTML comment.
+
+<!-- This content will not appear in the rendered Markdown -->
+Ignoring Markdown formatting
+You can tell GitHub to ignore (or escape) Markdown formatting by using \ before the Markdown character.
+
+Let's rename \*our-new-project\* to \*our-old-project\*.
+
+แสดงผลอักขระที่หลบหนี
+
+For more information, see Daring Fireball's "Markdown Syntax."
+
+Disabling Markdown rendering
+When viewing a Markdown file, you can click  at the top of the file to disable Markdown rendering and view the file's source instead.
+
+แสดง Markdown เป็นแหล่งที่มา
+
+Disabling Markdown rendering enables you to use source view features, such as line linking, which is not possible when viewing rendered Markdown files.
+
+Further reading
+GitHub Flavored Markdown Spec
+"About writing and formatting on GitHub"
+" การทำงานกับการจัดรูปแบบขั้นสูง "
+"การเรียนรู้ Markdown "
+เอกสารนี้ช่วยคุณได้หรือไม่?
+นโยบายความเป็นส่วนตัว
+ช่วยเราทำให้เอกสารเหล่านี้ยอดเยี่ยม!
+เอกสาร GitHub ทั้งหมดเป็นโอเพ่นซอร์ส เห็นอะไรผิดปกติหรือไม่ชัดเจน? ส่งคำขอดึง
+
+หรือเรียนรู้วิธีการมีส่วนร่วม
+
+ยังคงต้องการความช่วยเหลือ?
+ถามชุมชน GitHub
+ติดต่อฝ่ายสนับสนุน
+© 2021 GitHub, Inc.
+เงื่อนไข
+ความเป็นส่วนตัว
+ความปลอดภัย
+สถานะ
+ช่วย
+ติดต่อ GitHub
+ราคา
+นักพัฒนา API
+การฝึกอบรม
+บล็อก
+เกี่ยวกับ
+
