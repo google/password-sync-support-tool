@@ -15,9 +15,7 @@
 ' Password Sync diagnostics tool
 ' Liron Newman lironn@google.com
 
-' Do not change this line's format, build.bat relies on it.
 Const Ver = "2.0.3.0"
-
 Const ToolName = "PasswordSyncSupportTool"
 
 Dim fso, objShell, objShellApplication, CurrentComputerName
