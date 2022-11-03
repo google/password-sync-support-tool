@@ -221,6 +221,10 @@ Sub LogErr
   Err.Clear
 End Sub
 
+' We use the PrintLine method in code that runs in the per-DC
+' subprocesses, because they don't write to the log directly.
+' The main process reads their StdOut and writes it to the log on their
+' behalf.
 Sub PrintLine(Text)
   WScript.StdOut.WriteLine Text
 End Sub
