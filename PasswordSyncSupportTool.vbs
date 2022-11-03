@@ -91,7 +91,7 @@ If Not CheckIfRunningAsDomainAdmin Then WScript.Quit
 Dim arrWritableDCs
 arrWritableDCs = GetWritableDCs
 LogStr "A:Got " & UBound(arrWritableDCs) + 1 & " writable DCs"
-' Instanciate additional arrays
+' Instantiate additional arrays
 Dim arrExec()  ' For Exec objects
 ReDim arrExec(UBound(arrWritableDCs))
 Dim arrBuffers()  ' For StdOut buffers
@@ -243,7 +243,7 @@ End Sub
 Sub RunCommand(Command, OutputFileNameBase)
   On Error Resume Next
 
-  ' Always use bWaitOnReturn=True to make sure the subpreoccess returns after
+  ' Always use bWaitOnReturn=True to make sure the subproccess returns after
   ' all data was collected.
   PrintLine "Running command: " & Command
   objShell.Run "cmd /c " & Command & " 1>>" & OutputFileNameBase & ".txt " & _
