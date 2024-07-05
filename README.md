@@ -13,7 +13,7 @@ Password changes can happen on any writable DC in Active Directory, so it's impo
 Notes:
 * If you have multiple domains in your forest, you need to run the support tool while logged in as a user from the domain you want to investigate. It fetches the logs from all DCs in your domain, not across the entire forest.
 * You don't have to run it from a DC, you can run it from any domain member computer (as long as you're logged in as a Domain Admin), but it's better to run it from a DC that's affected by the issue you want to investigate.
-* Make sure that you have unblocked network connectivity between the computer where Password Sync Support Tool is running and all writable DCs in your domain. If you don't, some data would be missing. Specifically, make sure ports 135, 139, and 445 are open.
+* Make sure that you have unblocked network connectivity between the computer where Password Sync Support Tool is running and all writable DCs in your domain. If you don't, some data would be missing. Specifically, make sure ports 135, 139, and 445 are open for Windows RPC and SMB.
   * If you don't have any one machine that can communicate to all writable DCs, you should run Password Sync Support Tool on different machines that can connect to each of the writable DCs (or on them directly), so that it can generate separate reports for all of them.
 * If you can't start the support tool:
   1. Right click the file you downloaded (`PasswordSyncSupportTool.vbs`).
