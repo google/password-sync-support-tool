@@ -6,12 +6,15 @@ Learn more about [troubleshooting Password Sync](https://support.google.com/a/an
 
 ---
 
-This tool collects logs and information from all Domain Controllers running [Password Sync](https://support.google.com/a/answer/2611859) in order to allow reviewing them all in a single place to make troubleshooting easier. It will create a ZIP file on your Desktop when it's finished.
+This tool collects logs and information from all Domain Controllers running [Password Sync](https://support.google.com/a/answer/2611859) for Google Workspace and Cloud Identity customers, in order to allow reviewing them all in a single place to make troubleshooting easier. It will create a ZIP file on your Desktop when it's finished.
+
+Password changes can happen on any writable DC in Active Directory, so it's important to collect logs from all of them when investigating issues with passwords not syncing as expected.
 
 Notes:
 * If you have multiple domains in your forest, you need to run the support tool while logged in as a user from the domain you want to investigate. It fetches the logs from all DCs in your domain, not across the entire forest.
-  * You don't have to run it from a DC, you can run it from any domain member computer (as long as you're logged in as a Domain Admin), but it's better to run it from a DC that's affected by the issue you want to investigate.
-  * Make sure that you have unblocked network connectivity between all writable DCs in your domain. If you don't, some data would be missing.
+* You don't have to run it from a DC, you can run it from any domain member computer (as long as you're logged in as a Domain Admin), but it's better to run it from a DC that's affected by the issue you want to investigate.
+* Make sure that you have unblocked network connectivity between the computer where Password Sync Support Tool is running and all writable DCs in your domain. If you don't, some data would be missing. Specifically, make sure ports 135, 139, and 445 are open for Windows RPC and SMB.
+  * If you don't have any one machine that can communicate to all writable DCs, you should run Password Sync Support Tool on different machines that can connect to each of the writable DCs (or on them directly), so that it can generate separate reports for all of them.
 * If you can't start the support tool:
   1. Right click the file you downloaded (`PasswordSyncSupportTool.vbs`).
   2. Click "Properties".
